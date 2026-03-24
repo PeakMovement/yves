@@ -27,6 +27,7 @@ export default function CheckInPage() {
   const [step, setStep] = useState<Step>('greeting');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [symptomSeverities, setSymptomSeverities] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     overall_feeling: 3 as 1 | 2 | 3 | 4 | 5,
     symptom_change: 'same' as CheckIn['symptom_change'],
@@ -39,16 +40,20 @@ export default function CheckInPage() {
 
   useEffect(() => {
     if (client) {
-      setAlreadyDone(hasCheckedInToday(client.id));
-      const s = getSymptoms(client.id).filter((sym) => sym.active);
-      setSymptoms(s);
-      const initial: Record<string, number> = {};
-      s.forEach((sym) => { initial[sym.id] = 5; });
-      setSymptomSeverities(initial);
+      (async () => {
+        const done = await hasCheckedInToday(client.id);
+        setAlreadyDone(done);
+        const s = (await getSymptoms(client.id)).filter((sym) => sym.active);
+        setSymptoms(s);
+        const initial: Record<string, number> = {};
+        s.forEach((sym) => { initial[sym.id] = 5; });
+        setSymptomSeverities(initial);
+        setLoading(false);
+      })();
     }
   }, [client]);
 
-  if (!client) return <div className="page-loading">Loading...</div>;
+  if (!client || loading) return <div className="page-loading">Loading...</div>;
 
   if (isTrackingComplete(client)) {
     return (
@@ -81,20 +86,22 @@ export default function CheckInPage() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
-  function submit() {
-    const checkIn = createCheckIn({
+  async function submit() {
+    const checkIn = await createCheckIn({
       client_id: client!.id,
       ...form,
     });
 
-    symptoms.forEach((sym) => {
-      createSymptomEntry({
-        check_in_id: checkIn.id,
-        symptom_id: sym.id,
-        severity: symptomSeverities[sym.id] ?? 5,
-        notes: '',
-      });
-    });
+    await Promise.all(
+      symptoms.map((sym) =>
+        createSymptomEntry({
+          check_in_id: checkIn.id,
+          symptom_id: sym.id,
+          severity: symptomSeverities[sym.id] ?? 5,
+          notes: '',
+        }),
+      ),
+    );
 
     trackDeviceVisit(client!.id, 'checkin');
     setStep('done');

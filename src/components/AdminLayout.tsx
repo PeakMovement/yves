@@ -1,7 +1,66 @@
-import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users, LogOut, Lock } from 'lucide-react';
+
+const ADMIN_CODE = '1313';
+const ADMIN_SESSION_KEY = 'buddy_admin_authed';
+
+function AdminGate({ onUnlock }: { onUnlock: () => void }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (code.trim() === ADMIN_CODE) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+      onUnlock();
+    } else {
+      setError('Incorrect access code.');
+    }
+  }
+
+  return (
+    <div className="client-login">
+      <button className="btn btn-ghost back-link" onClick={() => navigate('/')}>
+        &larr; Back
+      </button>
+      <div className="login-card">
+        <div className="login-icon">
+          <Lock size={32} />
+        </div>
+        <h2>Practitioner Access</h2>
+        <p>Enter your access code to continue.</p>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            className="code-input"
+            placeholder="Access code"
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setError(''); }}
+            autoFocus
+            autoComplete="off"
+          />
+          {error && <p className="login-error">{error}</p>}
+          <button type="submit" className="btn btn-primary login-btn">
+            Unlock
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLayout() {
+  const [authed, setAuthed] = useState(
+    () => sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true'
+  );
+
+  if (!authed) {
+    return <AdminGate onUnlock={() => setAuthed(true)} />;
+  }
+
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -25,7 +84,7 @@ export default function AdminLayout() {
         </nav>
 
         <div className="sidebar-footer">
-          <NavLink to="/" className="sidebar-link">
+          <NavLink to="/" className="sidebar-link" onClick={() => sessionStorage.removeItem(ADMIN_SESSION_KEY)}>
             <LogOut size={18} />
             <span>Switch Portal</span>
           </NavLink>

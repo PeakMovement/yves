@@ -10,8 +10,7 @@ export function useActiveClient() {
   useEffect(() => {
     const id = sessionStorage.getItem(SESSION_KEY);
     if (id) {
-      const c = getClient(id);
-      setClient(c ?? null);
+      getClient(id).then((c) => setClient(c ?? null));
     }
   }, []);
 

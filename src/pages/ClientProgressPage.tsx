@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useActiveClient } from '../hooks/useClient';
 import { getCheckIns, getSymptoms, getSymptomEntriesBySymptom, generateReport } from '../lib/store';
-import type { FollowUpReport } from '../types/database';
+import type { CheckIn, Symptom, FollowUpReport } from '../types/database';
 import MiniChart from '../components/MiniChart';
 import { trendLabel, trendColor, painColor } from '../lib/utils';
 import {
@@ -17,18 +17,32 @@ import {
 export default function ClientProgressPage() {
   const client = useActiveClient();
   const [report, setReport] = useState<FollowUpReport | null>(null);
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [symptoms, setSymptoms] = useState<Symptom[]>([]);
+  const [symptomData, setSymptomData] = useState<Record<string, number[]>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (client) {
-      const r = generateReport(client.id);
-      setReport(r);
+      (async () => {
+        const r = await generateReport(client.id);
+        setReport(r);
+        const cis = await getCheckIns(client.id);
+        setCheckIns(cis);
+        const syms = (await getSymptoms(client.id)).filter((s) => s.active);
+        setSymptoms(syms);
+        const data: Record<string, number[]> = {};
+        for (const sym of syms) {
+          const entries = await getSymptomEntriesBySymptom(sym.id);
+          data[sym.id] = entries.map((e) => e.severity);
+        }
+        setSymptomData(data);
+        setLoading(false);
+      })();
     }
   }, [client]);
 
-  if (!client) return <div className="page-loading">Loading...</div>;
-
-  const checkIns = getCheckIns(client.id);
-  const symptoms = getSymptoms(client.id).filter((s) => s.active);
+  if (!client || loading) return <div className="page-loading">Loading...</div>;
 
   if (!report || checkIns.length === 0) {
     return (
@@ -104,8 +118,7 @@ export default function ClientProgressPage() {
         <div className="card chart-card">
           <h3>Symptom Trends</h3>
           {symptoms.map((sym) => {
-            const entries = getSymptomEntriesBySymptom(sym.id);
-            const data = entries.map((e) => e.severity);
+            const data = symptomData[sym.id] || [];
             if (data.length === 0) return null;
             return <MiniChart key={sym.id} data={data} label={sym.name} />;
           })}

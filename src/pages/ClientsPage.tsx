@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom } from '../lib/store';
-import type { Client } from '../types/database';
+import type { Client, CheckIn } from '../types/database';
 import { formatDate } from '../lib/utils';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 
+interface ClientRow {
+  client: Client;
+  checkIns: CheckIn[];
+  checkedInToday: boolean;
+}
+
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [rows, setRows] = useState<ClientRow[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newClient, setNewClient] = useState({
     full_name: '',
@@ -15,14 +21,25 @@ export default function ClientsPage() {
     symptoms: '',
   });
 
+  async function loadClients() {
+    const clients = await getClients();
+    const result: ClientRow[] = [];
+    for (const client of clients) {
+      const checkIns = await getCheckIns(client.id);
+      const checkedInToday = await hasCheckedInToday(client.id);
+      result.push({ client, checkIns, checkedInToday });
+    }
+    setRows(result);
+  }
+
   useEffect(() => {
-    setClients(getClients());
+    loadClients();
   }, []);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!newClient.full_name || !newClient.primary_complaint) return;
 
-    const client = createClient({
+    const client = await createClient({
       full_name: newClient.full_name,
       email: newClient.email,
       practitioner_id: 'demo-practitioner',
@@ -32,22 +49,22 @@ export default function ClientsPage() {
       tracking_duration_weeks: null,
     });
 
-    // Create symptoms from comma-separated list
     if (newClient.symptoms.trim()) {
-      newClient.symptoms.split(',').forEach((s) => {
+      const parts = newClient.symptoms.split(',');
+      for (const s of parts) {
         const name = s.trim();
         if (name) {
-          createSymptom({
+          await createSymptom({
             client_id: client.id,
             name,
             body_area: '',
             active: true,
           });
         }
-      });
+      }
     }
 
-    setClients(getClients());
+    await loadClients();
     setShowForm(false);
     setNewClient({ full_name: '', email: '', primary_complaint: '', next_appointment: '', symptoms: '' });
   }
@@ -102,9 +119,7 @@ export default function ClientsPage() {
       )}
 
       <div className="clients-list">
-        {clients.map((client) => {
-          const checkIns = getCheckIns(client.id);
-          const checkedInToday = hasCheckedInToday(client.id);
+        {rows.map(({ client, checkIns, checkedInToday }) => {
           const lastCheckIn = checkIns[0];
 
           return (
@@ -127,7 +142,7 @@ export default function ClientsPage() {
           );
         })}
 
-        {clients.length === 0 && (
+        {rows.length === 0 && (
           <div className="empty-state">
             <p>No clients yet. Add your first client to get started.</p>
           </div>

@@ -2,13 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient } from '../lib/store';
 import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
-import type { Client } from '../types/database';
+import type { Client, CheckIn } from '../types/database';
 import { formatDate } from '../lib/utils';
 import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar, Trash2, Mail, Send, Settings, X, Loader } from 'lucide-react';
 
+interface ClientRow {
+  client: Client;
+  checkIns: CheckIn[];
+  done: boolean;
+}
+
 export default function AdminClientsPage() {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [rows, setRows] = useState<ClientRow[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [createdClient, setCreatedClient] = useState<Client | null>(null);
   const [copied, setCopied] = useState(false);
@@ -26,20 +32,30 @@ export default function AdminClientsPage() {
     custom_code: '',
   });
 
+  async function loadClients() {
+    const clients = await getClients();
+    const result: ClientRow[] = [];
+    for (const client of clients) {
+      const checkIns = await getCheckIns(client.id);
+      const done = await hasCheckedInToday(client.id);
+      result.push({ client, checkIns, done });
+    }
+    setRows(result);
+  }
+
   useEffect(() => {
-    setClients(getClients());
+    loadClients();
   }, []);
 
   async function handleCreate() {
     if (!newClient.full_name.trim()) return;
 
-    // Calculate weeks from chosen end date
     let weeks: number | null = null;
     if (newClient.tracking_end_date) {
       const diffMs = new Date(newClient.tracking_end_date).getTime() - Date.now();
       weeks = Math.max(1, Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)));
     }
-    const client = createClient({
+    const client = await createClient({
       full_name: newClient.full_name.trim(),
       email: newClient.email.trim(),
       practitioner_id: 'demo-practitioner',
@@ -52,24 +68,24 @@ export default function AdminClientsPage() {
     });
 
     if (newClient.symptoms.trim()) {
-      newClient.symptoms.split(',').forEach((s) => {
+      const parts = newClient.symptoms.split(',');
+      for (const s of parts) {
         const name = s.trim();
         if (name) {
-          createSymptom({
+          await createSymptom({
             client_id: client.id,
             name,
             body_area: '',
             active: true,
           });
         }
-      });
+      }
     }
 
     setCreatedClient(client);
-    setClients(getClients());
+    await loadClients();
     setEmailStatus(null);
 
-    // Send welcome email if toggled on and email provided
     if (sendEmail && newClient.email.trim()) {
       setSendingEmail(true);
       const result = await sendWelcomeEmail({
@@ -111,11 +127,11 @@ export default function AdminClientsPage() {
     }
   }
 
-  function handleDelete(e: React.MouseEvent, clientId: string, name: string) {
+  async function handleDelete(e: React.MouseEvent, clientId: string, name: string) {
     e.stopPropagation();
     if (window.confirm(`Delete ${name}? This will remove all their check-in data.`)) {
-      deleteClient(clientId);
-      setClients(getClients());
+      await deleteClient(clientId);
+      await loadClients();
     }
   }
 
@@ -297,9 +313,7 @@ export default function AdminClientsPage() {
       )}
 
       <div className="admin-client-list">
-        {clients.map((client) => {
-          const checkIns = getCheckIns(client.id);
-          const done = hasCheckedInToday(client.id);
+        {rows.map(({ client, checkIns, done }) => {
           const lastCheckIn = checkIns[0];
           const hasFlagged = lastCheckIn?.flagged;
 
@@ -342,7 +356,7 @@ export default function AdminClientsPage() {
           );
         })}
 
-        {clients.length === 0 && (
+        {rows.length === 0 && (
           <div className="empty-state">
             <p>No clients yet. Add your first client to get started.</p>
           </div>

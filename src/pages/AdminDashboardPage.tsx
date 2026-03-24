@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, getDeviceAnalytics } from '../lib/store';
-import type { Client } from '../types/database';
+import type { Client, CheckIn } from '../types/database';
 import { formatDate } from '../lib/utils';
 import {
   Users,
@@ -15,22 +15,38 @@ import {
   Monitor,
 } from 'lucide-react';
 
+interface ClientRow {
+  client: Client;
+  checkIns: CheckIn[];
+  done: boolean;
+}
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [rows, setRows] = useState<ClientRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setClients(getClients());
+    (async () => {
+      const clients = await getClients();
+      const result: ClientRow[] = [];
+      for (const client of clients) {
+        const checkIns = await getCheckIns(client.id);
+        const done = await hasCheckedInToday(client.id);
+        result.push({ client, checkIns, done });
+      }
+      setRows(result);
+      setLoading(false);
+    })();
   }, []);
 
   const deviceAnalytics = getDeviceAnalytics();
-  const totalClients = clients.length;
-  const checkedInToday = clients.filter((c) => hasCheckedInToday(c.id)).length;
-  const flaggedToday = clients.filter((c) => {
-    const checkIns = getCheckIns(c.id);
-    return checkIns.length > 0 && checkIns[0].flagged;
-  }).length;
-  const totalCheckIns = clients.reduce((sum, c) => sum + getCheckIns(c.id).length, 0);
+  const totalClients = rows.length;
+  const checkedInToday = rows.filter((r) => r.done).length;
+  const flaggedToday = rows.filter((r) => r.checkIns.length > 0 && r.checkIns[0].flagged).length;
+  const totalCheckIns = rows.reduce((sum, r) => sum + r.checkIns.length, 0);
+
+  if (loading) return <div className="page-loading">Loading...</div>;
 
   return (
     <div className="admin-dashboard">
@@ -81,9 +97,7 @@ export default function AdminDashboardPage() {
       <div className="dashboard-section">
         <h3>Client Overview</h3>
         <div className="admin-client-list">
-          {clients.map((client) => {
-            const checkIns = getCheckIns(client.id);
-            const done = hasCheckedInToday(client.id);
+          {rows.map(({ client, checkIns, done }) => {
             const lastCheckIn = checkIns[0];
             const hasFlagged = lastCheckIn?.flagged;
 
@@ -118,7 +132,7 @@ export default function AdminDashboardPage() {
             );
           })}
 
-          {clients.length === 0 && (
+          {rows.length === 0 && (
             <div className="empty-state">
               <p>No clients yet. Add your first client to get started.</p>
             </div>

@@ -40,25 +40,40 @@ export default function AdminClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
+  const [symptomData, setSymptomData] = useState<Record<string, number[]>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [report, setReport] = useState<FollowUpReport | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (clientId) {
-      const c = getClient(clientId);
-      setClient(c ?? null);
-      setCheckIns(getCheckIns(clientId));
-      setSymptoms(getSymptoms(clientId).filter((s) => s.active));
+      (async () => {
+        const c = await getClient(clientId);
+        setClient(c ?? null);
+        const cis = await getCheckIns(clientId);
+        setCheckIns(cis);
+        const syms = (await getSymptoms(clientId)).filter((s) => s.active);
+        setSymptoms(syms);
+        const data: Record<string, number[]> = {};
+        for (const sym of syms) {
+          const entries = await getSymptomEntriesBySymptom(sym.id);
+          data[sym.id] = entries.map((e) => e.severity);
+        }
+        setSymptomData(data);
+        setLoading(false);
+      })();
     }
   }, [clientId]);
 
-  function handleGenerateReport() {
+  async function handleGenerateReport() {
     if (!clientId) return;
-    const r = generateReport(clientId);
+    const r = await generateReport(clientId);
     setReport(r);
     setShowReport(true);
   }
+
+  if (loading) return <div className="page-loading">Loading...</div>;
 
   if (!client) {
     return (
@@ -232,8 +247,7 @@ export default function AdminClientDetailPage() {
         <div className="card chart-card">
           <h3>Symptom Trends</h3>
           {symptoms.map((sym) => {
-            const entries = getSymptomEntriesBySymptom(sym.id);
-            const data = entries.map((e) => e.severity);
+            const data = symptomData[sym.id] || [];
             if (data.length === 0) return null;
             return <MiniChart key={sym.id} data={data} label={sym.name} />;
           })}

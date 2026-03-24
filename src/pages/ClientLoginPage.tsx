@@ -8,8 +8,9 @@ export default function ClientLoginPage() {
   const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
@@ -19,7 +20,10 @@ export default function ClientLoginPage() {
       return;
     }
 
-    const client = getClientByLoginCode(trimmed);
+    setLoading(true);
+    const client = await getClientByLoginCode(trimmed);
+    setLoading(false);
+
     if (!client) {
       setError('Code not recognised. Please check and try again.');
       return;
@@ -59,8 +63,8 @@ export default function ClientLoginPage() {
             spellCheck={false}
           />
           {error && <p className="login-error">{error}</p>}
-          <button type="submit" className="btn btn-primary login-btn">
-            Log in
+          <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
+            {loading ? 'Checking...' : 'Log in'}
           </button>
         </form>
       </div>

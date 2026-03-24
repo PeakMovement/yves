@@ -10,12 +10,23 @@ export default function TimelinePage() {
   const client = useActiveClient();
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
+  const [symptomData, setSymptomData] = useState<Record<string, number[]>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (client) {
-      setCheckIns(getCheckIns(client.id));
-      setSymptoms(getSymptoms(client.id).filter((s) => s.active));
+      (async () => {
+        const cis = await getCheckIns(client.id);
+        setCheckIns(cis);
+        const syms = (await getSymptoms(client.id)).filter((s) => s.active);
+        setSymptoms(syms);
+        const data: Record<string, number[]> = {};
+        for (const sym of syms) {
+          const entries = await getSymptomEntriesBySymptom(sym.id);
+          data[sym.id] = entries.map((e) => e.severity);
+        }
+        setSymptomData(data);
+      })();
     }
   }, [client]);
 
@@ -40,8 +51,7 @@ export default function TimelinePage() {
         <div className="card chart-card">
           <h3>Symptom Trends</h3>
           {symptoms.map((sym) => {
-            const entries = getSymptomEntriesBySymptom(sym.id);
-            const data = entries.map((e) => e.severity);
+            const data = symptomData[sym.id] || [];
             if (data.length === 0) return null;
             return (
               <MiniChart
