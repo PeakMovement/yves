@@ -1574,6 +1574,19 @@ body {
   color: var(--text-muted);
 }
 
+/* ── Delete Client Button ─────────────────────────── */
+.delete-client-btn {
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.delete-client-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
 /* ── Tracking Duration Field ──────────────────────── */
 .tracking-duration-field {
   margin-top: 4px;
@@ -1589,31 +1602,20 @@ body {
   margin-bottom: 8px;
 }
 
-.duration-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.duration-btn {
-  padding: 6px 12px;
+.date-picker-input {
+  width: 100%;
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.duration-btn:hover {
-  border-color: var(--primary);
   color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
 }
 
-.duration-btn.selected {
-  background: var(--primary);
-  color: white;
+.date-picker-input:focus {
+  outline: none;
   border-color: var(--primary);
 }
 

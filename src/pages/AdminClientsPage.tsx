@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient } from '../lib/store';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
-import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar, Trash2 } from 'lucide-react';
 
 export default function AdminClientsPage() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export default function AdminClientsPage() {
     full_name: '',
     primary_complaint: '',
     symptoms: '',
-    tracking_duration_weeks: '' as string,
+    tracking_end_date: '',
   });
 
   useEffect(() => {
@@ -25,7 +25,12 @@ export default function AdminClientsPage() {
   function handleCreate() {
     if (!newClient.full_name.trim()) return;
 
-    const weeks = newClient.tracking_duration_weeks ? parseInt(newClient.tracking_duration_weeks, 10) : null;
+    // Calculate weeks from chosen end date
+    let weeks: number | null = null;
+    if (newClient.tracking_end_date) {
+      const diffMs = new Date(newClient.tracking_end_date).getTime() - Date.now();
+      weeks = Math.max(1, Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)));
+    }
     const client = createClient({
       full_name: newClient.full_name.trim(),
       email: '',
@@ -33,7 +38,8 @@ export default function AdminClientsPage() {
       next_appointment: null,
       primary_complaint: newClient.primary_complaint,
       notes: null,
-      tracking_duration_weeks: weeks && weeks > 0 ? weeks : null,
+      tracking_duration_weeks: weeks,
+      tracking_end_date_override: newClient.tracking_end_date || null,
     });
 
     if (newClient.symptoms.trim()) {
@@ -52,7 +58,7 @@ export default function AdminClientsPage() {
 
     setCreatedClient(client);
     setClients(getClients());
-    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_duration_weeks: '' });
+    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_end_date: '' });
   }
 
   function handleCopyCode() {
@@ -60,6 +66,14 @@ export default function AdminClientsPage() {
       navigator.clipboard.writeText(createdClient.login_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  function handleDelete(e: React.MouseEvent, clientId: string, name: string) {
+    e.stopPropagation();
+    if (window.confirm(`Delete ${name}? This will remove all their check-in data.`)) {
+      deleteClient(clientId);
+      setClients(getClients());
     }
   }
 
@@ -100,40 +114,22 @@ export default function AdminClientsPage() {
             onChange={(e) => setNewClient({ ...newClient, symptoms: e.target.value })}
           />
           <div className="tracking-duration-field">
-            <label className="field-label">
+            <label className="field-label" htmlFor="tracking-end-date">
               <Calendar size={14} />
-              Tracking duration
+              Tracking end date
             </label>
-            <div className="duration-options">
-              {[
-                { value: '', label: 'No end date' },
-                { value: '1', label: '1 week' },
-                { value: '2', label: '2 weeks' },
-                { value: '4', label: '4 weeks' },
-                { value: '6', label: '6 weeks' },
-                { value: '8', label: '8 weeks' },
-                { value: '12', label: '12 weeks' },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`duration-btn ${newClient.tracking_duration_weeks === opt.value ? 'selected' : ''}`}
-                  onClick={() => setNewClient({ ...newClient, tracking_duration_weeks: opt.value })}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            {newClient.tracking_duration_weeks && (
+            <input
+              id="tracking-end-date"
+              type="date"
+              className="date-picker-input"
+              value={newClient.tracking_end_date}
+              min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
+              onChange={(e) => setNewClient({ ...newClient, tracking_end_date: e.target.value })}
+            />
+            {newClient.tracking_end_date && (
               <p className="duration-hint">
-                Client check-ins will end on{' '}
-                <strong>
-                  {formatDate(
-                    new Date(
-                      Date.now() + parseInt(newClient.tracking_duration_weeks, 10) * 7 * 24 * 60 * 60 * 1000
-                    ).toISOString()
-                  )}
-                </strong>
+                Buddy will track this client until{' '}
+                <strong>{formatDate(newClient.tracking_end_date)}</strong>, then let them know it's time to see the physio.
               </p>
             )}
           </div>
@@ -203,6 +199,13 @@ export default function AdminClientsPage() {
                 ) : (
                   <span className="status-badge pending"><AlertCircle size={14} /> Awaiting</span>
                 )}
+                <button
+                  className="btn btn-ghost btn-sm delete-client-btn"
+                  onClick={(e) => handleDelete(e, client.id, client.full_name)}
+                  title="Delete client"
+                >
+                  <Trash2 size={14} />
+                </button>
                 <ArrowRight size={16} className="acr-arrow" />
               </div>
             </div>

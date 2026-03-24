@@ -55,19 +55,22 @@ export function getClientByLoginCode(code: string): Client | undefined {
   return getClients().find((c) => c.login_code === code.toUpperCase());
 }
 
-export function createClient(data: Omit<Client, 'id' | 'created_at' | 'login_code' | 'tracking_end_date'>): Client {
+export function createClient(data: Omit<Client, 'id' | 'created_at' | 'login_code' | 'tracking_end_date'> & { tracking_end_date_override?: string | null; custom_login_code?: string }): Client {
   const clients = getClients();
   let trackingEndDate: string | null = null;
-  if (data.tracking_duration_weeks) {
+  if (data.tracking_end_date_override) {
+    trackingEndDate = new Date(data.tracking_end_date_override).toISOString();
+  } else if (data.tracking_duration_weeks) {
     const end = new Date();
     end.setDate(end.getDate() + data.tracking_duration_weeks * 7);
     trackingEndDate = end.toISOString();
   }
+  const { tracking_end_date_override, custom_login_code, ...rest } = data;
   const client: Client = {
-    ...data,
+    ...rest,
     id: uuid(),
     created_at: new Date().toISOString(),
-    login_code: generateLoginCode(),
+    login_code: custom_login_code || generateLoginCode(),
     tracking_end_date: trackingEndDate,
   };
   clients.push(client);
@@ -87,6 +90,16 @@ export function updateClient(id: string, data: Partial<Client>): Client | undefi
   clients[idx] = { ...clients[idx], ...data };
   write(STORAGE_KEYS.clients, clients);
   return clients[idx];
+}
+
+export function deleteClient(id: string): void {
+  const clients = getClients().filter((c) => c.id !== id);
+  write(STORAGE_KEYS.clients, clients);
+  // Also clean up related data
+  const checkIns = read<CheckIn>(STORAGE_KEYS.checkIns).filter((c) => c.client_id !== id);
+  write(STORAGE_KEYS.checkIns, checkIns);
+  const symptoms = read<Symptom>(STORAGE_KEYS.symptoms).filter((s) => s.client_id !== id);
+  write(STORAGE_KEYS.symptoms, symptoms);
 }
 
 // ── Symptoms ─────────────────────────────────────────────
@@ -303,4 +316,21 @@ export function generateReport(clientId: string) {
       recommendation_for_practitioner: recommendation,
     },
   };
+}
+
+// ── Seed data ───────────────────────────────────────────
+
+export function seedDefaultClients() {
+  const existing = getClients();
+  if (existing.some((c) => c.login_code === '7874')) return;
+  createClient({
+    full_name: 'Bruce Wayne',
+    email: '',
+    practitioner_id: 'demo-practitioner',
+    next_appointment: null,
+    primary_complaint: '',
+    notes: null,
+    tracking_duration_weeks: null,
+    custom_login_code: '7874',
+  });
 }

@@ -56,8 +56,7 @@ export default function CheckInPage() {
           <PartyPopper size={48} color="#6366f1" />
           <h2>Your tracking journey is complete!</h2>
           <p>
-            Great work, {client.full_name.split(' ')[0]}! You've finished your{' '}
-            {client.tracking_duration_weeks}-week tracking period. All your check-in data has been recorded and is ready for your practitioner to review.
+            Great work, {client.full_name.split(' ')[0]}! Your tracking period has ended. All your check-in data has been recorded and is ready for your practitioner to review.
           </p>
           <p className="tracking-complete-cta">Time to see the physio — book your follow-up appointment to go over your progress together.</p>
           <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
