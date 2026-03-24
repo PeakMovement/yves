@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient } from '../lib/store';
+import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
-import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar, Trash2 } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar, Trash2, Mail, Send, Settings, X, Loader } from 'lucide-react';
 
 export default function AdminClientsPage() {
   const navigate = useNavigate();
@@ -11,8 +12,14 @@ export default function AdminClientsPage() {
   const [showForm, setShowForm] = useState(false);
   const [createdClient, setCreatedClient] = useState<Client | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sendEmail, setSendEmail] = useState(true);
+  const [emailStatus, setEmailStatus] = useState<{ sent: boolean; error?: string } | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [showWebhookConfig, setShowWebhookConfig] = useState(false);
+  const [webhookUrl, setWebhookUrlState] = useState(getWebhookUrl());
   const [newClient, setNewClient] = useState({
     full_name: '',
+    email: '',
     primary_complaint: '',
     symptoms: '',
     tracking_end_date: '',
@@ -23,7 +30,7 @@ export default function AdminClientsPage() {
     setClients(getClients());
   }, []);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!newClient.full_name.trim()) return;
 
     // Calculate weeks from chosen end date
@@ -34,7 +41,7 @@ export default function AdminClientsPage() {
     }
     const client = createClient({
       full_name: newClient.full_name.trim(),
-      email: '',
+      email: newClient.email.trim(),
       practitioner_id: 'demo-practitioner',
       next_appointment: null,
       primary_complaint: newClient.primary_complaint,
@@ -60,7 +67,40 @@ export default function AdminClientsPage() {
 
     setCreatedClient(client);
     setClients(getClients());
-    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_end_date: '', custom_code: '' });
+    setEmailStatus(null);
+
+    // Send welcome email if toggled on and email provided
+    if (sendEmail && newClient.email.trim()) {
+      setSendingEmail(true);
+      const result = await sendWelcomeEmail({
+        client_name: client.full_name,
+        client_email: newClient.email.trim(),
+        login_code: client.login_code,
+        app_url: `${window.location.origin}/app/login`,
+      });
+      setSendingEmail(false);
+      setEmailStatus({ sent: result.success, error: result.error });
+    }
+
+    setNewClient({ full_name: '', email: '', primary_complaint: '', symptoms: '', tracking_end_date: '', custom_code: '' });
+  }
+
+  function handleSaveWebhook() {
+    setWebhookUrl(webhookUrl);
+    setShowWebhookConfig(false);
+  }
+
+  async function handleResendEmail() {
+    if (!createdClient || !createdClient.email) return;
+    setSendingEmail(true);
+    const result = await sendWelcomeEmail({
+      client_name: createdClient.full_name,
+      client_email: createdClient.email,
+      login_code: createdClient.login_code,
+      app_url: `${window.location.origin}/app/login`,
+    });
+    setSendingEmail(false);
+    setEmailStatus({ sent: result.success, error: result.error });
   }
 
   function handleCopyCode() {
@@ -104,6 +144,12 @@ export default function AdminClientsPage() {
             autoFocus
           />
           <input
+            type="email"
+            placeholder="Email address"
+            value={newClient.email}
+            onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+          />
+          <input
             type="text"
             placeholder="Primary complaint (optional)"
             value={newClient.primary_complaint}
@@ -143,6 +189,46 @@ export default function AdminClientsPage() {
               </p>
             )}
           </div>
+
+          {newClient.email.trim() && (
+            <div className="email-toggle-row">
+              <label className="email-toggle">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                />
+                <Mail size={14} />
+                <span>Send welcome email with login code</span>
+              </label>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowWebhookConfig(!showWebhookConfig)} title="Configure email webhook">
+                <Settings size={14} />
+              </button>
+            </div>
+          )}
+
+          {showWebhookConfig && (
+            <div className="webhook-config">
+              <label className="field-label">
+                <Settings size={14} />
+                Email webhook URL (Make.com / Zapier)
+              </label>
+              <div className="webhook-input-row">
+                <input
+                  type="url"
+                  placeholder="https://hook.make.com/..."
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrlState(e.target.value)}
+                />
+                <button className="btn btn-primary btn-sm" onClick={handleSaveWebhook}>Save</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowWebhookConfig(false)}>
+                  <X size={14} />
+                </button>
+              </div>
+              <p className="duration-hint">Paste your Make.com or Zapier webhook URL here. The app will POST client_name, client_email, login_code, and app_url.</p>
+            </div>
+          )}
+
           <div className="form-actions">
             <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={handleCreate} disabled={!newClient.full_name.trim()}>
@@ -159,6 +245,9 @@ export default function AdminClientsPage() {
             <h3>Client created</h3>
           </div>
           <p className="created-name">{createdClient.full_name}</p>
+          {createdClient.email && (
+            <p className="created-email">{createdClient.email}</p>
+          )}
           <p className="created-instruction">Share this login code with your client so they can access their check-in portal:</p>
           <div className="login-code-display">
             <span className="login-code-value">{createdClient.login_code}</span>
@@ -166,10 +255,41 @@ export default function AdminClientsPage() {
               {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
             </button>
           </div>
+
+          {sendingEmail && (
+            <div className="email-status sending">
+              <Loader size={14} className="spin" />
+              <span>Sending welcome email...</span>
+            </div>
+          )}
+
+          {emailStatus && emailStatus.sent && (
+            <div className="email-status success">
+              <Mail size={14} />
+              <span>Welcome email sent to {createdClient.email}</span>
+            </div>
+          )}
+
+          {emailStatus && !emailStatus.sent && (
+            <div className="email-status error">
+              <AlertTriangle size={14} />
+              <span>{emailStatus.error}</span>
+              <button className="btn btn-ghost btn-sm" onClick={handleResendEmail}>
+                <Send size={12} /> Retry
+              </button>
+            </div>
+          )}
+
+          {!emailStatus && !sendingEmail && createdClient.email && (
+            <button className="btn btn-ghost btn-sm email-manual-send" onClick={handleResendEmail}>
+              <Send size={14} /> Send welcome email
+            </button>
+          )}
+
           <p className="created-hint">This code is unique to this client. They'll enter it at the Client Portal to log in.</p>
           <div className="form-actions">
             <button className="btn btn-ghost" onClick={handleDismiss}>Done</button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setCreatedClient(null); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { setCreatedClient(null); setEmailStatus(null); }}>
               Add Another
             </button>
           </div>
