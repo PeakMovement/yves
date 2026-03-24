@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, PartyPopper } from 'lucide-react';
 import { useActiveClient } from '../hooks/useClient';
 import PainSlider from '../components/PainSlider';
 import RatingSelector from '../components/RatingSelector';
@@ -10,6 +10,7 @@ import {
   getSymptoms,
   createCheckIn,
   createSymptomEntry,
+  isTrackingComplete,
 } from '../lib/store';
 import type { CheckIn, Symptom } from '../types/database';
 import { feelingEmoji, formatDate } from '../lib/utils';
@@ -47,6 +48,25 @@ export default function CheckInPage() {
   }, [client]);
 
   if (!client) return <div className="page-loading">Loading...</div>;
+
+  if (isTrackingComplete(client)) {
+    return (
+      <div className="checkin-page">
+        <div className="checkin-card done-card tracking-complete-card">
+          <PartyPopper size={48} color="#6366f1" />
+          <h2>Your tracking journey is complete!</h2>
+          <p>
+            Great work, {client.full_name.split(' ')[0]}! You've finished your{' '}
+            {client.tracking_duration_weeks}-week tracking period. All your check-in data has been recorded and is ready for your practitioner to review.
+          </p>
+          <p className="tracking-complete-cta">Time to see the physio — book your follow-up appointment to go over your progress together.</p>
+          <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
+            View your timeline
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const stepIndex = STEPS.indexOf(step);
   const progress = Math.round(((stepIndex) / (STEPS.length - 1)) * 100);

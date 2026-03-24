@@ -55,17 +55,29 @@ export function getClientByLoginCode(code: string): Client | undefined {
   return getClients().find((c) => c.login_code === code.toUpperCase());
 }
 
-export function createClient(data: Omit<Client, 'id' | 'created_at' | 'login_code'>): Client {
+export function createClient(data: Omit<Client, 'id' | 'created_at' | 'login_code' | 'tracking_end_date'>): Client {
   const clients = getClients();
+  let trackingEndDate: string | null = null;
+  if (data.tracking_duration_weeks) {
+    const end = new Date();
+    end.setDate(end.getDate() + data.tracking_duration_weeks * 7);
+    trackingEndDate = end.toISOString();
+  }
   const client: Client = {
     ...data,
     id: uuid(),
     created_at: new Date().toISOString(),
     login_code: generateLoginCode(),
+    tracking_end_date: trackingEndDate,
   };
   clients.push(client);
   write(STORAGE_KEYS.clients, clients);
   return client;
+}
+
+export function isTrackingComplete(client: Client): boolean {
+  if (!client.tracking_end_date) return false;
+  return new Date() >= new Date(client.tracking_end_date);
 }
 
 export function updateClient(id: string, data: Partial<Client>): Client | undefined {

@@ -1573,3 +1573,68 @@ body {
   padding: 6px 8px;
   color: var(--text-muted);
 }
+
+/* ── Tracking Duration Field ──────────────────────── */
+.tracking-duration-field {
+  margin-top: 4px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.duration-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.duration-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.duration-btn:hover {
+  border-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.duration-btn.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.duration-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Tracking Complete Card ──────────────────────── */
+.tracking-complete-card {
+  text-align: center;
+}
+
+.tracking-complete-card h2 {
+  color: var(--primary);
+}
+
+.tracking-complete-cta {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 16px;
+  margin-top: 8px;
+}

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom } from '../lib/store';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
-import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar } from 'lucide-react';
 
 export default function AdminClientsPage() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export default function AdminClientsPage() {
     full_name: '',
     primary_complaint: '',
     symptoms: '',
+    tracking_duration_weeks: '' as string,
   });
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function AdminClientsPage() {
   function handleCreate() {
     if (!newClient.full_name.trim()) return;
 
+    const weeks = newClient.tracking_duration_weeks ? parseInt(newClient.tracking_duration_weeks, 10) : null;
     const client = createClient({
       full_name: newClient.full_name.trim(),
       email: '',
@@ -31,6 +33,7 @@ export default function AdminClientsPage() {
       next_appointment: null,
       primary_complaint: newClient.primary_complaint,
       notes: null,
+      tracking_duration_weeks: weeks && weeks > 0 ? weeks : null,
     });
 
     if (newClient.symptoms.trim()) {
@@ -49,7 +52,7 @@ export default function AdminClientsPage() {
 
     setCreatedClient(client);
     setClients(getClients());
-    setNewClient({ full_name: '', primary_complaint: '', symptoms: '' });
+    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_duration_weeks: '' });
   }
 
   function handleCopyCode() {
@@ -96,6 +99,44 @@ export default function AdminClientsPage() {
             value={newClient.symptoms}
             onChange={(e) => setNewClient({ ...newClient, symptoms: e.target.value })}
           />
+          <div className="tracking-duration-field">
+            <label className="field-label">
+              <Calendar size={14} />
+              Tracking duration
+            </label>
+            <div className="duration-options">
+              {[
+                { value: '', label: 'No end date' },
+                { value: '1', label: '1 week' },
+                { value: '2', label: '2 weeks' },
+                { value: '4', label: '4 weeks' },
+                { value: '6', label: '6 weeks' },
+                { value: '8', label: '8 weeks' },
+                { value: '12', label: '12 weeks' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`duration-btn ${newClient.tracking_duration_weeks === opt.value ? 'selected' : ''}`}
+                  onClick={() => setNewClient({ ...newClient, tracking_duration_weeks: opt.value })}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {newClient.tracking_duration_weeks && (
+              <p className="duration-hint">
+                Client check-ins will end on{' '}
+                <strong>
+                  {formatDate(
+                    new Date(
+                      Date.now() + parseInt(newClient.tracking_duration_weeks, 10) * 7 * 24 * 60 * 60 * 1000
+                    ).toISOString()
+                  )}
+                </strong>
+              </p>
+            )}
+          </div>
           <div className="form-actions">
             <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={handleCreate} disabled={!newClient.full_name.trim()}>

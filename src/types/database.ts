@@ -8,6 +8,8 @@ export interface Client {
   primary_complaint: string;
   notes: string | null;
   login_code: string;
+  tracking_duration_weeks: number | null;
+  tracking_end_date: string | null;
 }
 
 export interface CheckIn {
