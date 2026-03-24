@@ -29,6 +29,7 @@ export default function ClientsPage() {
       next_appointment: newClient.next_appointment || null,
       primary_complaint: newClient.primary_complaint,
       notes: null,
+      tracking_duration_weeks: null,
     });
 
     // Create symptoms from comma-separated list
