@@ -43,6 +43,17 @@ export interface SymptomEntry {
   notes: string;
 }
 
+export interface DeviceVisit {
+  id: string;
+  client_id: string | null;
+  device_type: 'iphone' | 'ipad' | 'mac' | 'android' | 'windows' | 'other';
+  user_agent: string;
+  screen_width: number;
+  screen_height: number;
+  visited_at: string;
+  page: string;
+}
+
 export interface FollowUpReport {
   id: string;
   client_id: string;

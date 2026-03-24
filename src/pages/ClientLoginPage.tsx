@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClientByLoginCode } from '../lib/store';
+import { getClientByLoginCode, trackDeviceVisit } from '../lib/store';
 import { loginClient } from '../hooks/useClient';
 import { KeyRound, ArrowLeft } from 'lucide-react';
 
@@ -26,6 +26,7 @@ export default function ClientLoginPage() {
     }
 
     loginClient(client.id);
+    trackDeviceVisit(client.id, 'login');
     navigate('/app/checkin');
   }
 

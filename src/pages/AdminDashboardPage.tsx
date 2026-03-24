@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, getDeviceAnalytics } from '../lib/store';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
 import {
@@ -10,6 +10,9 @@ import {
   AlertTriangle,
   ClipboardCheck,
   ArrowRight,
+  Smartphone,
+  Tablet,
+  Monitor,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -20,6 +23,7 @@ export default function AdminDashboardPage() {
     setClients(getClients());
   }, []);
 
+  const deviceAnalytics = getDeviceAnalytics();
   const totalClients = clients.length;
   const checkedInToday = clients.filter((c) => hasCheckedInToday(c.id)).length;
   const flaggedToday = clients.filter((c) => {
@@ -120,6 +124,46 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="dashboard-section" style={{ marginTop: 32 }}>
+        <h3>Device Analytics</h3>
+        {deviceAnalytics.total === 0 ? (
+          <div className="empty-state">
+            <p>No device data yet. Analytics will appear as clients use the app.</p>
+          </div>
+        ) : (
+          <>
+            <div className="device-analytics-grid">
+              {deviceAnalytics.deviceBreakdown.map(({ device, count, percentage }) => {
+                const config: Record<string, { icon: React.ReactNode; label: string; bg: string; color: string }> = {
+                  iphone: { icon: <Smartphone size={20} />, label: 'iPhone', bg: '#eef2ff', color: '#6366f1' },
+                  ipad: { icon: <Tablet size={20} />, label: 'iPad', bg: '#fce7f3', color: '#db2777' },
+                  mac: { icon: <Monitor size={20} />, label: 'Mac', bg: '#f0fdf4', color: '#16a34a' },
+                  android: { icon: <Smartphone size={20} />, label: 'Android', bg: '#d1fae5', color: '#059669' },
+                  windows: { icon: <Monitor size={20} />, label: 'Windows', bg: '#f0f9ff', color: '#0284c7' },
+                  other: { icon: <Monitor size={20} />, label: 'Other', bg: '#f1f5f9', color: '#64748b' },
+                };
+                const c = config[device] || config.other;
+                return (
+                  <div key={device} className="device-stat-card">
+                    <div className="device-stat-icon" style={{ background: c.bg, color: c.color }}>
+                      {c.icon}
+                    </div>
+                    <div className="device-stat-info">
+                      <span className="device-stat-label">{c.label}</span>
+                      <span className="device-stat-value">{count} <span className="device-stat-pct">({percentage}%)</span></span>
+                    </div>
+                    <div className="device-stat-bar-wrap">
+                      <div className="device-stat-bar" style={{ width: `${percentage}%`, background: c.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="device-total-label">{deviceAnalytics.total} total visit{deviceAnalytics.total !== 1 ? 's' : ''} tracked</p>
+          </>
+        )}
       </div>
     </div>
   );

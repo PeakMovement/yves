@@ -1,4 +1,4 @@
-import type { Client, CheckIn, Symptom, SymptomEntry } from '../types/database';
+import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit } from '../types/database';
 
 // Local storage-based store for development / offline use.
 // In production this will be replaced by Supabase queries.
@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   checkIns: 'buddy_check_ins',
   symptoms: 'buddy_symptoms',
   symptomEntries: 'buddy_symptom_entries',
+  deviceVisits: 'buddy_device_visits',
 } as const;
 
 function read<T>(key: string): T[] {
@@ -316,6 +317,66 @@ export function generateReport(clientId: string) {
       recommendation_for_practitioner: recommendation,
     },
   };
+}
+
+// ── Device Tracking ─────────────────────────────────
+
+function detectDeviceType(): DeviceVisit['device_type'] {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document)) return 'ipad';
+  if (/iPhone/.test(ua)) return 'iphone';
+  if (/Macintosh/.test(ua)) return 'mac';
+  if (/Android/.test(ua) && /Mobile/.test(ua)) return 'android';
+  if (/Windows/.test(ua)) return 'windows';
+  return 'other';
+}
+
+export function trackDeviceVisit(clientId: string | null, page: string): DeviceVisit {
+  const all = read<DeviceVisit>(STORAGE_KEYS.deviceVisits);
+  const visit: DeviceVisit = {
+    id: uuid(),
+    client_id: clientId,
+    device_type: detectDeviceType(),
+    user_agent: navigator.userAgent,
+    screen_width: window.screen.width,
+    screen_height: window.screen.height,
+    visited_at: new Date().toISOString(),
+    page,
+  };
+  all.push(visit);
+  write(STORAGE_KEYS.deviceVisits, all);
+  return visit;
+}
+
+export function getDeviceVisits(): DeviceVisit[] {
+  return read<DeviceVisit>(STORAGE_KEYS.deviceVisits);
+}
+
+export function getDeviceAnalytics() {
+  const visits = getDeviceVisits();
+  const total = visits.length;
+
+  const byDevice: Record<string, number> = {};
+  const byPage: Record<string, number> = {};
+
+  for (const v of visits) {
+    byDevice[v.device_type] = (byDevice[v.device_type] || 0) + 1;
+    byPage[v.page] = (byPage[v.page] || 0) + 1;
+  }
+
+  const deviceBreakdown = Object.entries(byDevice)
+    .map(([device, count]) => ({
+      device: device as DeviceVisit['device_type'],
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const pageBreakdown = Object.entries(byPage)
+    .map(([page, count]) => ({ page, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { total, deviceBreakdown, pageBreakdown };
 }
 
 // ── Seed data ───────────────────────────────────────────

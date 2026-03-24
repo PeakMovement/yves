@@ -11,6 +11,7 @@ import {
   createCheckIn,
   createSymptomEntry,
   isTrackingComplete,
+  trackDeviceVisit,
 } from '../lib/store';
 import type { CheckIn, Symptom } from '../types/database';
 import { feelingEmoji, formatDate } from '../lib/utils';
@@ -95,6 +96,7 @@ export default function CheckInPage() {
       });
     });
 
+    trackDeviceVisit(client!.id, 'checkin');
     setStep('done');
   }
 
