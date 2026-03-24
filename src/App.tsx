@@ -1,20 +1,37 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ClientLayout from './components/ClientLayout';
+import AdminLayout from './components/AdminLayout';
+import PortalSelectPage from './pages/PortalSelectPage';
 import CheckInPage from './pages/CheckInPage';
 import TimelinePage from './pages/TimelinePage';
-import ReportPage from './pages/ReportPage';
-import ClientsPage from './pages/ClientsPage';
+import ClientProgressPage from './pages/ClientProgressPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminClientsPage from './pages/AdminClientsPage';
+import AdminClientDetailPage from './pages/AdminClientDetailPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<CheckInPage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/report" element={<ReportPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
+        {/* Portal Selection */}
+        <Route path="/" element={<PortalSelectPage />} />
+
+        {/* Client Portal */}
+        <Route path="/app" element={<ClientLayout />}>
+          <Route index element={<CheckInPage />} />
+          <Route path="timeline" element={<TimelinePage />} />
+          <Route path="progress" element={<ClientProgressPage />} />
         </Route>
+
+        {/* Admin / Practitioner Portal */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="clients" element={<AdminClientsPage />} />
+          <Route path="clients/:clientId" element={<AdminClientDetailPage />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

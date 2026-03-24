@@ -87,7 +87,7 @@ export default function CheckInPage() {
           <h2>All done for today!</h2>
           <p>You've already completed your daily check-in. Come back tomorrow and let me know how you're doing.</p>
           <p className="next-checkin">Your next appointment: <strong>{client.next_appointment ? formatDate(client.next_appointment) : 'Not set'}</strong></p>
-          <button className="btn btn-secondary" onClick={() => navigate('/timeline')}>
+          <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
             View your timeline
           </button>
         </div>
@@ -266,7 +266,7 @@ export default function CheckInPage() {
             <CheckCircle size={48} color="#10b981" />
             <h2>Check-in complete!</h2>
             <p>Thanks {client.full_name.split(' ')[0]}. This has been recorded and will be included in your follow-up report.</p>
-            <button className="btn btn-secondary" onClick={() => navigate('/timeline')}>
+            <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
               View your timeline
             </button>
           </div>
