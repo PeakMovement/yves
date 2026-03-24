@@ -16,6 +16,7 @@ export default function AdminClientsPage() {
     primary_complaint: '',
     symptoms: '',
     tracking_end_date: '',
+    custom_code: '',
   });
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function AdminClientsPage() {
       notes: null,
       tracking_duration_weeks: weeks,
       tracking_end_date_override: newClient.tracking_end_date || null,
+      custom_login_code: newClient.custom_code.trim() || undefined,
     });
 
     if (newClient.symptoms.trim()) {
@@ -58,7 +60,7 @@ export default function AdminClientsPage() {
 
     setCreatedClient(client);
     setClients(getClients());
-    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_end_date: '' });
+    setNewClient({ full_name: '', primary_complaint: '', symptoms: '', tracking_end_date: '', custom_code: '' });
   }
 
   function handleCopyCode() {
@@ -112,6 +114,14 @@ export default function AdminClientsPage() {
             placeholder="Symptoms to track (comma-separated, optional)"
             value={newClient.symptoms}
             onChange={(e) => setNewClient({ ...newClient, symptoms: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="Custom login code (optional, auto-generated if empty)"
+            value={newClient.custom_code}
+            onChange={(e) => setNewClient({ ...newClient, custom_code: e.target.value.toUpperCase() })}
+            maxLength={6}
+            autoComplete="off"
           />
           <div className="tracking-duration-field">
             <label className="field-label" htmlFor="tracking-end-date">
