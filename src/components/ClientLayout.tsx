@@ -1,7 +1,19 @@
-import { Outlet, NavLink } from 'react-router-dom';
-import { ClipboardCheck, BarChart3, TrendingUp } from 'lucide-react';
+import { Outlet, NavLink, Navigate } from 'react-router-dom';
+import { ClipboardCheck, BarChart3, TrendingUp, LogOut } from 'lucide-react';
+import { getLoggedInClientId, logoutClient } from '../hooks/useClient';
 
 export default function ClientLayout() {
+  const clientId = getLoggedInClientId();
+
+  if (!clientId) {
+    return <Navigate to="/app/login" replace />;
+  }
+
+  function handleLogout() {
+    logoutClient();
+    window.location.href = '/';
+  }
+
   return (
     <div className="app-layout client-layout">
       <header className="app-header">
@@ -12,6 +24,9 @@ export default function ClientLayout() {
             <span className="brand-tagline">Your symptom companion</span>
           </div>
         </div>
+        <button className="btn btn-ghost btn-sm logout-btn" onClick={handleLogout}>
+          <LogOut size={16} />
+        </button>
       </header>
 
       <main className="app-main">
@@ -19,7 +34,7 @@ export default function ClientLayout() {
       </main>
 
       <nav className="app-nav">
-        <NavLink to="/app" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/app/checkin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <ClipboardCheck size={20} />
           <span>Check-in</span>
         </NavLink>

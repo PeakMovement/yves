@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, seedDemoData } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday } from '../lib/store';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
 import {
@@ -17,7 +17,6 @@ export default function AdminDashboardPage() {
   const [clients, setClients] = useState<Client[]>([]);
 
   useEffect(() => {
-    seedDemoData();
     setClients(getClients());
   }, []);
 

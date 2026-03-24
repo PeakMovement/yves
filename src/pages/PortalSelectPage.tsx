@@ -13,7 +13,7 @@ export default function PortalSelectPage() {
       </div>
 
       <div className="portal-options">
-        <button className="portal-card" onClick={() => navigate('/app')}>
+        <button className="portal-card" onClick={() => navigate('/app/login')}>
           <div className="portal-icon client-icon">
             <User size={32} />
           </div>

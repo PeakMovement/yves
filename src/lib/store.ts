@@ -27,6 +27,20 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
+// ── Login codes ─────────────────────────────────────────
+
+function generateLoginCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  // Ensure uniqueness
+  const existing = getClients().map((c) => c.login_code);
+  if (existing.includes(code)) return generateLoginCode();
+  return code;
+}
+
 // ── Clients ──────────────────────────────────────────────
 
 export function getClients(): Client[] {
@@ -37,12 +51,17 @@ export function getClient(id: string): Client | undefined {
   return getClients().find((c) => c.id === id);
 }
 
-export function createClient(data: Omit<Client, 'id' | 'created_at'>): Client {
+export function getClientByLoginCode(code: string): Client | undefined {
+  return getClients().find((c) => c.login_code === code.toUpperCase());
+}
+
+export function createClient(data: Omit<Client, 'id' | 'created_at' | 'login_code'>): Client {
   const clients = getClients();
   const client: Client = {
     ...data,
     id: uuid(),
     created_at: new Date().toISOString(),
+    login_code: generateLoginCode(),
   };
   clients.push(client);
   write(STORAGE_KEYS.clients, clients);
@@ -272,84 +291,4 @@ export function generateReport(clientId: string) {
       recommendation_for_practitioner: recommendation,
     },
   };
-}
-
-// ── Demo data seed ───────────────────────────────────────
-
-export function seedDemoData() {
-  if (getClients().length > 0) return; // already seeded
-
-  const client = createClient({
-    full_name: 'Sarah Mitchell',
-    email: 'sarah@example.com',
-    practitioner_id: 'demo-practitioner',
-    next_appointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    primary_complaint: 'Lower back pain with intermittent left leg radiculopathy',
-    notes: 'Office worker, sedentary lifestyle. Started treatment 2 weeks ago.',
-  });
-
-  const s1 = createSymptom({
-    client_id: client.id,
-    name: 'Lower back pain',
-    body_area: 'Lumbar spine',
-    active: true,
-  });
-
-  const s2 = createSymptom({
-    client_id: client.id,
-    name: 'Left leg tingling',
-    body_area: 'Left leg',
-    active: true,
-  });
-
-  const s3 = createSymptom({
-    client_id: client.id,
-    name: 'Morning stiffness',
-    body_area: 'Lumbar spine',
-    active: true,
-  });
-
-  // Seed 7 days of check-ins
-  const demoCheckIns: Omit<CheckIn, 'id' | 'created_at' | 'flagged'>[] = [
-    { client_id: client.id, overall_feeling: 2, symptom_change: 'same', pain_level: 7, sleep_quality: 2, stress_level: 4, medication_taken: true, notes: 'Bad day at work, sitting for 8 hours straight. Back was really sore by evening.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'slightly_better', pain_level: 6, sleep_quality: 3, stress_level: 3, medication_taken: true, notes: 'Did the stretches this morning. Felt a bit better during the day.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'same', pain_level: 6, sleep_quality: 3, stress_level: 3, medication_taken: false, notes: 'Walked for 30 minutes at lunch. No change really.' },
-    { client_id: client.id, overall_feeling: 2, symptom_change: 'slightly_worse', pain_level: 8, sleep_quality: 2, stress_level: 4, medication_taken: true, notes: 'Tried to garden today and it flared up badly. Leg tingling came back.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'slightly_better', pain_level: 5, sleep_quality: 3, stress_level: 3, medication_taken: true, notes: 'Rested yesterday evening. Pain settled down overnight.' },
-    { client_id: client.id, overall_feeling: 4, symptom_change: 'slightly_better', pain_level: 4, sleep_quality: 4, stress_level: 2, medication_taken: false, notes: 'Good day. Did exercises morning and evening. Back felt manageable.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'same', pain_level: 5, sleep_quality: 3, stress_level: 3, medication_taken: false, notes: 'Steady day. Not much change from yesterday.' },
-  ];
-
-  const severities = [
-    [7, 5, 6],
-    [6, 4, 5],
-    [6, 4, 5],
-    [8, 7, 7],
-    [5, 3, 4],
-    [4, 2, 3],
-    [5, 3, 4],
-  ];
-
-  demoCheckIns.forEach((data, i) => {
-    // Backdate each check-in
-    const allCheckIns = read<CheckIn>(STORAGE_KEYS.checkIns);
-    const checkIn: CheckIn = {
-      ...data,
-      id: uuid(),
-      created_at: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
-      flagged: data.pain_level >= 8 || data.symptom_change === 'much_worse' || data.overall_feeling <= 1,
-    };
-    allCheckIns.push(checkIn);
-    write(STORAGE_KEYS.checkIns, allCheckIns);
-
-    // Add symptom entries
-    [s1, s2, s3].forEach((symptom, j) => {
-      createSymptomEntry({
-        check_in_id: checkIn.id,
-        symptom_id: symptom.id,
-        severity: severities[i][j],
-        notes: '',
-      });
-    });
-  });
 }

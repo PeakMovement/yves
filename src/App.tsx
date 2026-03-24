@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ClientLayout from './components/ClientLayout';
 import AdminLayout from './components/AdminLayout';
 import PortalSelectPage from './pages/PortalSelectPage';
+import ClientLoginPage from './pages/ClientLoginPage';
 import CheckInPage from './pages/CheckInPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
@@ -16,9 +17,13 @@ function App() {
         {/* Portal Selection */}
         <Route path="/" element={<PortalSelectPage />} />
 
-        {/* Client Portal */}
+        {/* Client Login */}
+        <Route path="/app/login" element={<ClientLoginPage />} />
+
+        {/* Client Portal (requires login) */}
         <Route path="/app" element={<ClientLayout />}>
-          <Route index element={<CheckInPage />} />
+          <Route index element={<Navigate to="/app/checkin" replace />} />
+          <Route path="checkin" element={<CheckInPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="progress" element={<ClientProgressPage />} />
         </Route>

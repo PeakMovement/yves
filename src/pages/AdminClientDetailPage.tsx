@@ -94,6 +94,7 @@ export default function AdminClientDetailPage() {
           <h2>{client.full_name}</h2>
           <p className="detail-complaint">{client.primary_complaint}</p>
           <div className="detail-meta">
+            <span className="acr-code">Code: {client.login_code}</span>
             {client.email && <span>{client.email}</span>}
             {client.next_appointment && (
               <span><Calendar size={12} /> Next: {formatDate(client.next_appointment)}</span>

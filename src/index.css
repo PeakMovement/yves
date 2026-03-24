@@ -1415,3 +1415,161 @@ body {
     width: 100%;
   }
 }
+
+/* ── Client Login Page ──────────────────────────────── */
+.client-login {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg);
+}
+
+.client-login .back-link {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+.login-card {
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+}
+
+.login-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: #eef2ff;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.login-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.login-card > p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.code-input {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  font-size: 16px;
+}
+
+/* ── Login Code Display (admin) ─────────────────────── */
+.created-client-card {
+  border: 2px solid var(--success);
+}
+
+.created-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.created-success h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.created-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.created-instruction {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.login-code-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.login-code-value {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+}
+
+.copy-btn {
+  padding: 6px 12px;
+}
+
+.created-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.acr-code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 12px;
+}
+
+/* ── Header with logout ─────────────────────────────── */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-btn {
+  padding: 6px 8px;
+  color: var(--text-muted);
+}

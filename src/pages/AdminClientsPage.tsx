@@ -1,35 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, seedDemoData } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom } from '../lib/store';
 import type { Client } from '../types/database';
 import { formatDate } from '../lib/utils';
-import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check } from 'lucide-react';
 
 export default function AdminClientsPage() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [createdClient, setCreatedClient] = useState<Client | null>(null);
+  const [copied, setCopied] = useState(false);
   const [newClient, setNewClient] = useState({
     full_name: '',
-    email: '',
     primary_complaint: '',
-    next_appointment: '',
     symptoms: '',
   });
 
   useEffect(() => {
-    seedDemoData();
     setClients(getClients());
   }, []);
 
   function handleCreate() {
-    if (!newClient.full_name || !newClient.primary_complaint) return;
+    if (!newClient.full_name.trim()) return;
 
     const client = createClient({
-      full_name: newClient.full_name,
-      email: newClient.email,
+      full_name: newClient.full_name.trim(),
+      email: '',
       practitioner_id: 'demo-practitioner',
-      next_appointment: newClient.next_appointment || null,
+      next_appointment: null,
       primary_complaint: newClient.primary_complaint,
       notes: null,
     });
@@ -48,21 +47,34 @@ export default function AdminClientsPage() {
       });
     }
 
+    setCreatedClient(client);
     setClients(getClients());
+    setNewClient({ full_name: '', primary_complaint: '', symptoms: '' });
+  }
+
+  function handleCopyCode() {
+    if (createdClient) {
+      navigator.clipboard.writeText(createdClient.login_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  function handleDismiss() {
+    setCreatedClient(null);
     setShowForm(false);
-    setNewClient({ full_name: '', email: '', primary_complaint: '', next_appointment: '', symptoms: '' });
   }
 
   return (
     <div className="admin-clients-page">
       <div className="admin-page-header">
         <h2>Clients</h2>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-primary btn-sm" onClick={() => { setShowForm(!showForm); setCreatedClient(null); }}>
           <UserPlus size={16} /> Add Client
         </button>
       </div>
 
-      {showForm && (
+      {showForm && !createdClient && (
         <div className="card add-client-form">
           <h3>New Client</h3>
           <input
@@ -70,34 +82,49 @@ export default function AdminClientsPage() {
             placeholder="Full name"
             value={newClient.full_name}
             onChange={(e) => setNewClient({ ...newClient, full_name: e.target.value })}
-          />
-          <input
-            type="email"
-            placeholder="Email (optional)"
-            value={newClient.email}
-            onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+            autoFocus
           />
           <input
             type="text"
-            placeholder="Primary complaint"
+            placeholder="Primary complaint (optional)"
             value={newClient.primary_complaint}
             onChange={(e) => setNewClient({ ...newClient, primary_complaint: e.target.value })}
           />
           <input
             type="text"
-            placeholder="Symptoms to track (comma-separated)"
+            placeholder="Symptoms to track (comma-separated, optional)"
             value={newClient.symptoms}
             onChange={(e) => setNewClient({ ...newClient, symptoms: e.target.value })}
           />
-          <input
-            type="date"
-            placeholder="Next appointment"
-            value={newClient.next_appointment}
-            onChange={(e) => setNewClient({ ...newClient, next_appointment: e.target.value })}
-          />
           <div className="form-actions">
             <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleCreate}>Create</button>
+            <button className="btn btn-primary" onClick={handleCreate} disabled={!newClient.full_name.trim()}>
+              Create Client
+            </button>
+          </div>
+        </div>
+      )}
+
+      {createdClient && (
+        <div className="card created-client-card">
+          <div className="created-success">
+            <CheckCircle size={24} color="#10b981" />
+            <h3>Client created</h3>
+          </div>
+          <p className="created-name">{createdClient.full_name}</p>
+          <p className="created-instruction">Share this login code with your client so they can access their check-in portal:</p>
+          <div className="login-code-display">
+            <span className="login-code-value">{createdClient.login_code}</span>
+            <button className="btn btn-ghost btn-sm copy-btn" onClick={handleCopyCode}>
+              {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+            </button>
+          </div>
+          <p className="created-hint">This code is unique to this client. They'll enter it at the Client Portal to log in.</p>
+          <div className="form-actions">
+            <button className="btn btn-ghost" onClick={handleDismiss}>Done</button>
+            <button className="btn btn-primary btn-sm" onClick={() => { setCreatedClient(null); }}>
+              Add Another
+            </button>
           </div>
         </div>
       )}
@@ -120,12 +147,12 @@ export default function AdminClientsPage() {
                   <h4>{client.full_name}</h4>
                   {hasFlagged && <AlertTriangle size={14} color="#f59e0b" />}
                 </div>
-                <p className="acr-complaint">{client.primary_complaint}</p>
+                {client.primary_complaint && (
+                  <p className="acr-complaint">{client.primary_complaint}</p>
+                )}
                 <div className="acr-meta">
+                  <span className="acr-code">Code: {client.login_code}</span>
                   <span>{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}</span>
-                  {client.next_appointment && (
-                    <span>Next: {formatDate(client.next_appointment)}</span>
-                  )}
                   {lastCheckIn && <span>Last: {formatDate(lastCheckIn.created_at)}</span>}
                 </div>
               </div>

@@ -7,6 +7,7 @@ export interface Client {
   next_appointment: string | null;
   primary_complaint: string;
   notes: string | null;
+  login_code: string;
 }
 
 export interface CheckIn {
