@@ -131,16 +131,20 @@ export async function createClient(
       .insert(client)
       .select()
       .single();
-    if (!error && inserted) {
-      // Also cache locally
-      const local = readLocal<Client>(STORAGE_KEYS.clients);
-      local.push(inserted as Client);
-      writeLocal(STORAGE_KEYS.clients, local);
-      return inserted as Client;
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      throw new Error(error.message.includes('duplicate')
+        ? 'This login code is already in use. Please choose a different one.'
+        : `Failed to save client: ${error.message}`);
     }
+    // Also cache locally
+    const local = readLocal<Client>(STORAGE_KEYS.clients);
+    local.push(inserted as Client);
+    writeLocal(STORAGE_KEYS.clients, local);
+    return inserted as Client;
   }
 
-  // Fallback to localStorage only
+  // Fallback to localStorage only (no Supabase configured)
   const clients = readLocal<Client>(STORAGE_KEYS.clients);
   clients.push(client);
   writeLocal(STORAGE_KEYS.clients, clients);
@@ -541,19 +545,9 @@ export function getDeviceAnalytics() {
   return { total, deviceBreakdown, pageBreakdown };
 }
 
-// ── Seed data ───────────────────────────────────────────
+// ── Seed data (no-op in production) ──────────────────────
 
 export async function seedDefaultClients() {
-  const existing = await getClients();
-  if (existing.some((c) => c.login_code === '7874')) return;
-  await createClient({
-    full_name: 'Bruce Wayne',
-    email: '',
-    practitioner_id: 'demo-practitioner',
-    next_appointment: null,
-    primary_complaint: '',
-    notes: null,
-    tracking_duration_weeks: null,
-    custom_login_code: '7874',
-  });
+  // No seeding needed — all real client data lives in Supabase
+  // and persists across deploys.
 }

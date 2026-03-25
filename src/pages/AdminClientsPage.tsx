@@ -20,6 +20,7 @@ export default function AdminClientsPage() {
   const [copied, setCopied] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
   const [emailStatus, setEmailStatus] = useState<{ sent: boolean; error?: string } | null>(null);
+  const [createError, setCreateError] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showWebhookConfig, setShowWebhookConfig] = useState(false);
   const [webhookUrl, setWebhookUrlState] = useState(getWebhookUrl());
@@ -49,23 +50,31 @@ export default function AdminClientsPage() {
 
   async function handleCreate() {
     if (!newClient.full_name.trim()) return;
+    setCreateError('');
 
     let weeks: number | null = null;
     if (newClient.tracking_end_date) {
       const diffMs = new Date(newClient.tracking_end_date).getTime() - Date.now();
       weeks = Math.max(1, Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)));
     }
-    const client = await createClient({
-      full_name: newClient.full_name.trim(),
-      email: newClient.email.trim(),
-      practitioner_id: 'demo-practitioner',
-      next_appointment: null,
-      primary_complaint: newClient.primary_complaint,
-      notes: null,
-      tracking_duration_weeks: weeks,
-      tracking_end_date_override: newClient.tracking_end_date || null,
-      custom_login_code: newClient.custom_code.trim() || undefined,
-    });
+
+    let client;
+    try {
+      client = await createClient({
+        full_name: newClient.full_name.trim(),
+        email: newClient.email.trim(),
+        practitioner_id: 'demo-practitioner',
+        next_appointment: null,
+        primary_complaint: newClient.primary_complaint,
+        notes: null,
+        tracking_duration_weeks: weeks,
+        tracking_end_date_override: newClient.tracking_end_date || null,
+        custom_login_code: newClient.custom_code.trim() || undefined,
+      });
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create client.');
+      return;
+    }
 
     if (newClient.symptoms.trim()) {
       const parts = newClient.symptoms.split(',');
@@ -244,6 +253,8 @@ export default function AdminClientsPage() {
               <p className="duration-hint">Paste your Make.com or Zapier webhook URL here. The app will POST client_name, client_email, login_code, and app_url.</p>
             </div>
           )}
+
+          {createError && <p className="login-error">{createError}</p>}
 
           <div className="form-actions">
             <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
