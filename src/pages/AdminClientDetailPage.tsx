@@ -6,8 +6,10 @@ import {
   getSymptoms,
   getSymptomEntriesBySymptom,
   generateReport,
+  calculateComplianceRating,
 } from '../lib/store';
 import type { Client, CheckIn, Symptom, FollowUpReport } from '../types/database';
+import type { ComplianceRating } from '../lib/store';
 import MiniChart from '../components/MiniChart';
 import {
   formatDate,
@@ -32,6 +34,7 @@ import {
   TrendingDown,
   Minus,
   Calendar,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AdminClientDetailPage() {
@@ -44,6 +47,7 @@ export default function AdminClientDetailPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [report, setReport] = useState<FollowUpReport | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [compliance, setCompliance] = useState<ComplianceRating | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function AdminClientDetailPage() {
           data[sym.id] = entries.map((e) => e.severity);
         }
         setSymptomData(data);
+        if (c) setCompliance(calculateComplianceRating(c, cis));
         setLoading(false);
       })();
     }
@@ -126,6 +131,54 @@ export default function AdminClientDetailPage() {
       {client.notes && (
         <div className="detail-notes card">
           <strong>Practitioner Notes:</strong> {client.notes}
+        </div>
+      )}
+
+      {/* Compliance Rating */}
+      {compliance && compliance.grade !== 'No Data' && (
+        <div className="compliance-card card">
+          <div className="compliance-header">
+            <div className="compliance-title">
+              <ShieldCheck size={20} />
+              <h3>Compliance Rating</h3>
+            </div>
+            <div className="compliance-score-badge" style={{ backgroundColor: compliance.color + '18', color: compliance.color, borderColor: compliance.color + '40' }}>
+              <span className="compliance-score-value">{compliance.score}</span>
+              <span className="compliance-score-label">{compliance.grade}</span>
+            </div>
+          </div>
+
+          <div className="compliance-bar-outer">
+            <div
+              className="compliance-bar-fill"
+              style={{ width: `${compliance.score}%`, backgroundColor: compliance.color }}
+            />
+          </div>
+
+          <div className="compliance-breakdown">
+            {Object.values(compliance.breakdown).map((item) => (
+              <div key={item.label} className="compliance-item">
+                <div className="compliance-item-header">
+                  <span className="compliance-item-label">{item.label}</span>
+                  <span className="compliance-item-score">{item.score}/100</span>
+                </div>
+                <div className="compliance-item-bar-outer">
+                  <div
+                    className="compliance-item-bar-fill"
+                    style={{ width: `${item.score}%` }}
+                  />
+                </div>
+                <p className="compliance-item-detail">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {compliance && compliance.grade === 'No Data' && (
+        <div className="compliance-card card compliance-empty">
+          <ShieldCheck size={20} color="#94a3b8" />
+          <p>Compliance rating will appear after the client completes their first check-in.</p>
         </div>
       )}
 

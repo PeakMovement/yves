@@ -545,6 +545,128 @@ export function getDeviceAnalytics() {
   return { total, deviceBreakdown, pageBreakdown };
 }
 
+// ── Compliance Rating ────────────────────────────────────
+
+export interface ComplianceRating {
+  score: number; // 0-100
+  grade: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'No Data';
+  color: string;
+  breakdown: {
+    frequency: { score: number; label: string; detail: string };
+    engagement: { score: number; label: string; detail: string };
+    variability: { score: number; label: string; detail: string };
+    recency: { score: number; label: string; detail: string };
+  };
+}
+
+export function calculateComplianceRating(client: Client, checkIns: CheckIn[]): ComplianceRating {
+  if (checkIns.length === 0) {
+    return {
+      score: 0,
+      grade: 'No Data',
+      color: '#94a3b8',
+      breakdown: {
+        frequency: { score: 0, label: 'Frequency', detail: 'No check-ins yet' },
+        engagement: { score: 0, label: 'Engagement', detail: 'No data to evaluate' },
+        variability: { score: 0, label: 'Variability', detail: 'No data to evaluate' },
+        recency: { score: 0, label: 'Recency', detail: 'No check-ins yet' },
+      },
+    };
+  }
+
+  const sorted = [...checkIns].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  // 1. FREQUENCY (35%) — how often they check in relative to days since start
+  const startDate = new Date(client.created_at);
+  const now = new Date();
+  const totalDays = Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const uniqueDays = new Set(sorted.map((c) => c.created_at.slice(0, 10))).size;
+  const freqRatio = Math.min(1, uniqueDays / totalDays);
+  const freqScore = Math.round(freqRatio * 100);
+  let freqDetail = '';
+  if (freqRatio >= 0.8) freqDetail = `Checked in ${uniqueDays} of ${totalDays} days — very consistent`;
+  else if (freqRatio >= 0.5) freqDetail = `Checked in ${uniqueDays} of ${totalDays} days — moderate consistency`;
+  else freqDetail = `Only ${uniqueDays} of ${totalDays} days — needs encouragement`;
+
+  // 2. ENGAGEMENT (30%) — are they writing notes, not just clicking through?
+  const withNotes = sorted.filter((c) => c.notes && c.notes.trim().length > 10).length;
+  const notesRatio = withNotes / sorted.length;
+  // Check for variation in answers (not always picking the same values)
+  const uniqueFeelings = new Set(sorted.map((c) => c.overall_feeling)).size;
+  const uniqueChanges = new Set(sorted.map((c) => c.symptom_change)).size;
+  const answerDiversity = Math.min(1, (uniqueFeelings + uniqueChanges) / 6); // max 5+5=10 options
+  const engScore = Math.round(((notesRatio * 0.6) + (answerDiversity * 0.4)) * 100);
+  let engDetail = '';
+  if (notesRatio >= 0.5) engDetail = `${withNotes} of ${sorted.length} check-ins include detailed notes`;
+  else if (notesRatio >= 0.2) engDetail = `Some notes provided — could be more detailed`;
+  else engDetail = `Rarely writes notes — may be rushing through check-ins`;
+
+  // 3. VARIABILITY (20%) — are responses suspiciously identical? (suggests generic answers)
+  const painValues = sorted.map((c) => c.pain_level);
+  const sleepValues = sorted.map((c) => c.sleep_quality);
+  const stressValues = sorted.map((c) => c.stress_level);
+
+  function stdDev(arr: number[]): number {
+    if (arr.length <= 1) return 0;
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    return Math.sqrt(arr.reduce((sum, v) => sum + (v - mean) ** 2, 0) / arr.length);
+  }
+
+  const painStd = stdDev(painValues);
+  const sleepStd = stdDev(sleepValues);
+  const stressStd = stdDev(stressValues);
+  // If all answers are identical (std=0), score is 0. Some variation is healthy.
+  const avgStd = (painStd + sleepStd * 2 + stressStd * 2) / 5; // scale sleep/stress (1-5) vs pain (0-10)
+  const varScore = Math.round(Math.min(1, avgStd / 1.5) * 100); // 1.5+ std dev = full marks
+  let varDetail = '';
+  if (varScore >= 70) varDetail = 'Answers show natural day-to-day variation — appears genuine';
+  else if (varScore >= 30) varDetail = 'Some variation in responses — mostly authentic';
+  else varDetail = 'Responses are very uniform — may be giving generic answers';
+
+  // 4. RECENCY (15%) — are they still active?
+  const lastCheckIn = sorted[sorted.length - 1];
+  const daysSinceLast = Math.max(0, Math.ceil((now.getTime() - new Date(lastCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+  let recScore = 100;
+  if (daysSinceLast <= 1) recScore = 100;
+  else if (daysSinceLast <= 3) recScore = 80;
+  else if (daysSinceLast <= 7) recScore = 50;
+  else if (daysSinceLast <= 14) recScore = 20;
+  else recScore = 0;
+  let recDetail = '';
+  if (daysSinceLast === 0) recDetail = 'Checked in today';
+  else if (daysSinceLast === 1) recDetail = 'Last check-in was yesterday';
+  else recDetail = `Last check-in was ${daysSinceLast} days ago`;
+
+  // Weighted total
+  const total = Math.round(
+    freqScore * 0.35 +
+    engScore * 0.30 +
+    varScore * 0.20 +
+    recScore * 0.15
+  );
+
+  let grade: ComplianceRating['grade'];
+  let color: string;
+  if (total >= 80) { grade = 'Excellent'; color = '#10b981'; }
+  else if (total >= 60) { grade = 'Good'; color = '#6366f1'; }
+  else if (total >= 40) { grade = 'Fair'; color = '#f59e0b'; }
+  else { grade = 'Poor'; color = '#ef4444'; }
+
+  return {
+    score: total,
+    grade,
+    color,
+    breakdown: {
+      frequency: { score: freqScore, label: 'Frequency', detail: freqDetail },
+      engagement: { score: engScore, label: 'Engagement', detail: engDetail },
+      variability: { score: varScore, label: 'Variability', detail: varDetail },
+      recency: { score: recScore, label: 'Recency', detail: recDetail },
+    },
+  };
+}
+
 // ── Seed data (no-op in production) ──────────────────────
 
 export async function seedDefaultClients() {
