@@ -181,6 +181,13 @@ export default function AdminClientDetailPage() {
       )}
 
       {/* Report Section */}
+      {showReport && !report && (
+        <div className="card compliance-empty" style={{ marginBottom: 20 }}>
+          <FileText size={20} color="#94a3b8" />
+          <p>No check-in data yet. The report will be available once this client completes at least one check-in.</p>
+        </div>
+      )}
+
       {showReport && report && (
         <div className="generated-report">
           <div className="report-brand">
