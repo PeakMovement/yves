@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, PartyPopper } from 'lucide-react';
 import { useActiveClient } from '../hooks/useClient';
 import PainSlider from '../components/PainSlider';
 import RatingSelector from '../components/RatingSelector';
@@ -10,6 +10,8 @@ import {
   getSymptoms,
   createCheckIn,
   createSymptomEntry,
+  isTrackingComplete,
+  trackDeviceVisit,
 } from '../lib/store';
 import type { CheckIn, Symptom } from '../types/database';
 import { feelingEmoji, formatDate } from '../lib/utils';
@@ -25,6 +27,7 @@ export default function CheckInPage() {
   const [step, setStep] = useState<Step>('greeting');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [symptomSeverities, setSymptomSeverities] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     overall_feeling: 3 as 1 | 2 | 3 | 4 | 5,
     symptom_change: 'same' as CheckIn['symptom_change'],
@@ -37,16 +40,38 @@ export default function CheckInPage() {
 
   useEffect(() => {
     if (client) {
-      setAlreadyDone(hasCheckedInToday(client.id));
-      const s = getSymptoms(client.id).filter((sym) => sym.active);
-      setSymptoms(s);
-      const initial: Record<string, number> = {};
-      s.forEach((sym) => { initial[sym.id] = 5; });
-      setSymptomSeverities(initial);
+      (async () => {
+        const done = await hasCheckedInToday(client.id);
+        setAlreadyDone(done);
+        const s = (await getSymptoms(client.id)).filter((sym) => sym.active);
+        setSymptoms(s);
+        const initial: Record<string, number> = {};
+        s.forEach((sym) => { initial[sym.id] = 5; });
+        setSymptomSeverities(initial);
+        setLoading(false);
+      })();
     }
   }, [client]);
 
-  if (!client) return <div className="page-loading">Loading...</div>;
+  if (!client || loading) return <div className="page-loading">Loading...</div>;
+
+  if (isTrackingComplete(client)) {
+    return (
+      <div className="checkin-page">
+        <div className="checkin-card done-card tracking-complete-card">
+          <PartyPopper size={48} color="#6366f1" />
+          <h2>Your tracking journey is complete!</h2>
+          <p>
+            Great work, {client.full_name.split(' ')[0]}! Your tracking period has ended. All your check-in data has been recorded and is ready for your practitioner to review.
+          </p>
+          <p className="tracking-complete-cta">Time to see the physio — book your follow-up appointment to go over your progress together.</p>
+          <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
+            View your timeline
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const stepIndex = STEPS.indexOf(step);
   const progress = Math.round(((stepIndex) / (STEPS.length - 1)) * 100);
@@ -61,21 +86,24 @@ export default function CheckInPage() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
-  function submit() {
-    const checkIn = createCheckIn({
+  async function submit() {
+    const checkIn = await createCheckIn({
       client_id: client!.id,
       ...form,
     });
 
-    symptoms.forEach((sym) => {
-      createSymptomEntry({
-        check_in_id: checkIn.id,
-        symptom_id: sym.id,
-        severity: symptomSeverities[sym.id] ?? 5,
-        notes: '',
-      });
-    });
+    await Promise.all(
+      symptoms.map((sym) =>
+        createSymptomEntry({
+          check_in_id: checkIn.id,
+          symptom_id: sym.id,
+          severity: symptomSeverities[sym.id] ?? 5,
+          notes: '',
+        }),
+      ),
+    );
 
+    trackDeviceVisit(client!.id, 'checkin');
     setStep('done');
   }
 
@@ -87,7 +115,7 @@ export default function CheckInPage() {
           <h2>All done for today!</h2>
           <p>You've already completed your daily check-in. Come back tomorrow and let me know how you're doing.</p>
           <p className="next-checkin">Your next appointment: <strong>{client.next_appointment ? formatDate(client.next_appointment) : 'Not set'}</strong></p>
-          <button className="btn btn-secondary" onClick={() => navigate('/timeline')}>
+          <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
             View your timeline
           </button>
         </div>
@@ -266,7 +294,7 @@ export default function CheckInPage() {
             <CheckCircle size={48} color="#10b981" />
             <h2>Check-in complete!</h2>
             <p>Thanks {client.full_name.split(' ')[0]}. This has been recorded and will be included in your follow-up report.</p>
-            <button className="btn btn-secondary" onClick={() => navigate('/timeline')}>
+            <button className="btn btn-secondary" onClick={() => navigate('/app/timeline')}>
               View your timeline
             </button>
           </div>

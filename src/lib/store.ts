@@ -1,16 +1,21 @@
-import type { Client, CheckIn, Symptom, SymptomEntry } from '../types/database';
+import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit } from '../types/database';
+import { supabase } from './supabase';
 
-// Local storage-based store for development / offline use.
-// In production this will be replaced by Supabase queries.
+// Supabase-backed store with localStorage cache.
+// All read/write functions are async and hit the database first,
+// falling back to localStorage if Supabase is not configured.
 
 const STORAGE_KEYS = {
   clients: 'buddy_clients',
   checkIns: 'buddy_check_ins',
   symptoms: 'buddy_symptoms',
   symptomEntries: 'buddy_symptom_entries',
+  deviceVisits: 'buddy_device_visits',
 } as const;
 
-function read<T>(key: string): T[] {
+// ── Helpers ──────────────────────────────────────────────
+
+function readLocal<T>(key: string): T[] {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
@@ -19,7 +24,7 @@ function read<T>(key: string): T[] {
   }
 }
 
-function write<T>(key: string, data: T[]) {
+function writeLocal<T>(key: string, data: T[]) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
@@ -27,83 +32,253 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
+function isSupabaseConfigured(): boolean {
+  const url = import.meta.env.VITE_SUPABASE_URL || 'https://teehpkaxgqnzwqtmxfhe.supabase.co';
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  return !!url && !url.includes('placeholder') && (!!key || url.includes('teehpkaxgqnzwqtmxfhe'));
+}
+
+// ── Login codes ─────────────────────────────────────────
+
+function generateLoginCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+async function generateUniqueLoginCode(): Promise<string> {
+  const code = generateLoginCode();
+  const existing = await getClients();
+  if (existing.some((c) => c.login_code === code)) return generateUniqueLoginCode();
+  return code;
+}
+
 // ── Clients ──────────────────────────────────────────────
 
-export function getClients(): Client[] {
-  return read<Client>(STORAGE_KEYS.clients);
+export async function getClients(): Promise<Client[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      writeLocal(STORAGE_KEYS.clients, data);
+      return data as Client[];
+    }
+  }
+  return readLocal<Client>(STORAGE_KEYS.clients);
 }
 
-export function getClient(id: string): Client | undefined {
-  return getClients().find((c) => c.id === id);
+export async function getClient(id: string): Promise<Client | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!error && data) return data as Client;
+  }
+  return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
 }
 
-export function createClient(data: Omit<Client, 'id' | 'created_at'>): Client {
-  const clients = getClients();
+export async function getClientByLoginCode(code: string): Promise<Client | undefined> {
+  const upper = code.toUpperCase();
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('login_code', upper)
+      .single();
+    if (!error && data) return data as Client;
+  }
+  return readLocal<Client>(STORAGE_KEYS.clients).find(
+    (c) => c.login_code === upper,
+  );
+}
+
+export async function createClient(
+  data: Omit<Client, 'id' | 'created_at' | 'login_code' | 'tracking_end_date'> & {
+    tracking_end_date_override?: string | null;
+    custom_login_code?: string;
+  },
+): Promise<Client> {
+  let trackingEndDate: string | null = null;
+  if (data.tracking_end_date_override) {
+    trackingEndDate = new Date(data.tracking_end_date_override).toISOString();
+  } else if (data.tracking_duration_weeks) {
+    const end = new Date();
+    end.setDate(end.getDate() + data.tracking_duration_weeks * 7);
+    trackingEndDate = end.toISOString();
+  }
+
+  const { tracking_end_date_override, custom_login_code, ...rest } = data;
+  const loginCode = custom_login_code || (await generateUniqueLoginCode());
+
   const client: Client = {
-    ...data,
+    ...rest,
     id: uuid(),
     created_at: new Date().toISOString(),
+    login_code: loginCode,
+    tracking_end_date: trackingEndDate,
   };
+
+  if (isSupabaseConfigured()) {
+    const { data: inserted, error } = await supabase
+      .from('clients')
+      .insert(client)
+      .select()
+      .single();
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      throw new Error(error.message.includes('duplicate')
+        ? 'This login code is already in use. Please choose a different one.'
+        : `Failed to save client: ${error.message}`);
+    }
+    // Also cache locally
+    const local = readLocal<Client>(STORAGE_KEYS.clients);
+    local.push(inserted as Client);
+    writeLocal(STORAGE_KEYS.clients, local);
+    return inserted as Client;
+  }
+
+  // Fallback to localStorage only (no Supabase configured)
+  const clients = readLocal<Client>(STORAGE_KEYS.clients);
   clients.push(client);
-  write(STORAGE_KEYS.clients, clients);
+  writeLocal(STORAGE_KEYS.clients, clients);
   return client;
 }
 
-export function updateClient(id: string, data: Partial<Client>): Client | undefined {
-  const clients = getClients();
+export function isTrackingComplete(client: Client): boolean {
+  if (!client.tracking_end_date) return false;
+  return new Date() >= new Date(client.tracking_end_date);
+}
+
+export async function updateClient(id: string, data: Partial<Client>): Promise<Client | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data: updated, error } = await supabase
+      .from('clients')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && updated) {
+      // Sync local cache
+      const local = readLocal<Client>(STORAGE_KEYS.clients);
+      const idx = local.findIndex((c) => c.id === id);
+      if (idx !== -1) { local[idx] = updated as Client; writeLocal(STORAGE_KEYS.clients, local); }
+      return updated as Client;
+    }
+  }
+
+  const clients = readLocal<Client>(STORAGE_KEYS.clients);
   const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) return undefined;
   clients[idx] = { ...clients[idx], ...data };
-  write(STORAGE_KEYS.clients, clients);
+  writeLocal(STORAGE_KEYS.clients, clients);
   return clients[idx];
+}
+
+export async function deleteClient(id: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabase.from('clients').delete().eq('id', id);
+  }
+  const clients = readLocal<Client>(STORAGE_KEYS.clients).filter((c) => c.id !== id);
+  writeLocal(STORAGE_KEYS.clients, clients);
+  const checkIns = readLocal<CheckIn>(STORAGE_KEYS.checkIns).filter((c) => c.client_id !== id);
+  writeLocal(STORAGE_KEYS.checkIns, checkIns);
+  const symptoms = readLocal<Symptom>(STORAGE_KEYS.symptoms).filter((s) => s.client_id !== id);
+  writeLocal(STORAGE_KEYS.symptoms, symptoms);
 }
 
 // ── Symptoms ─────────────────────────────────────────────
 
-export function getSymptoms(clientId: string): Symptom[] {
-  return read<Symptom>(STORAGE_KEYS.symptoms).filter((s) => s.client_id === clientId);
+export async function getSymptoms(clientId: string): Promise<Symptom[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('symptoms')
+      .select('*')
+      .eq('client_id', clientId);
+    if (!error && data) return data as Symptom[];
+  }
+  return readLocal<Symptom>(STORAGE_KEYS.symptoms).filter((s) => s.client_id === clientId);
 }
 
-export function createSymptom(data: Omit<Symptom, 'id' | 'created_at'>): Symptom {
-  const all = read<Symptom>(STORAGE_KEYS.symptoms);
+export async function createSymptom(data: Omit<Symptom, 'id' | 'created_at'>): Promise<Symptom> {
   const symptom: Symptom = {
     ...data,
     id: uuid(),
     created_at: new Date().toISOString(),
   };
+
+  if (isSupabaseConfigured()) {
+    const { data: inserted, error } = await supabase
+      .from('symptoms')
+      .insert(symptom)
+      .select()
+      .single();
+    if (!error && inserted) return inserted as Symptom;
+  }
+
+  const all = readLocal<Symptom>(STORAGE_KEYS.symptoms);
   all.push(symptom);
-  write(STORAGE_KEYS.symptoms, all);
+  writeLocal(STORAGE_KEYS.symptoms, all);
   return symptom;
 }
 
-export function toggleSymptomActive(id: string): void {
-  const all = read<Symptom>(STORAGE_KEYS.symptoms);
+export async function toggleSymptomActive(id: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    const { data: current } = await supabase.from('symptoms').select('active').eq('id', id).single();
+    if (current) {
+      await supabase.from('symptoms').update({ active: !current.active }).eq('id', id);
+      return;
+    }
+  }
+  const all = readLocal<Symptom>(STORAGE_KEYS.symptoms);
   const idx = all.findIndex((s) => s.id === id);
   if (idx !== -1) {
     all[idx].active = !all[idx].active;
-    write(STORAGE_KEYS.symptoms, all);
+    writeLocal(STORAGE_KEYS.symptoms, all);
   }
 }
 
 // ── Check-ins ────────────────────────────────────────────
 
-export function getCheckIns(clientId: string): CheckIn[] {
-  return read<CheckIn>(STORAGE_KEYS.checkIns)
+export async function getCheckIns(clientId: string): Promise<CheckIn[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    if (!error && data) return data as CheckIn[];
+  }
+  return readLocal<CheckIn>(STORAGE_KEYS.checkIns)
     .filter((c) => c.client_id === clientId)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
-export function getCheckIn(id: string): CheckIn | undefined {
-  return read<CheckIn>(STORAGE_KEYS.checkIns).find((c) => c.id === id);
+export async function getCheckIn(id: string): Promise<CheckIn | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!error && data) return data as CheckIn;
+  }
+  return readLocal<CheckIn>(STORAGE_KEYS.checkIns).find((c) => c.id === id);
 }
 
-export function hasCheckedInToday(clientId: string): boolean {
+export async function hasCheckedInToday(clientId: string): Promise<boolean> {
   const today = new Date().toISOString().slice(0, 10);
-  return getCheckIns(clientId).some((c) => c.created_at.slice(0, 10) === today);
+  const checkIns = await getCheckIns(clientId);
+  return checkIns.some((c) => c.created_at.slice(0, 10) === today);
 }
 
-export function createCheckIn(data: Omit<CheckIn, 'id' | 'created_at' | 'flagged'>): CheckIn {
-  const all = read<CheckIn>(STORAGE_KEYS.checkIns);
+export async function createCheckIn(data: Omit<CheckIn, 'id' | 'created_at' | 'flagged'>): Promise<CheckIn> {
   const flagged =
     data.pain_level >= 8 ||
     data.symptom_change === 'much_worse' ||
@@ -114,39 +289,74 @@ export function createCheckIn(data: Omit<CheckIn, 'id' | 'created_at' | 'flagged
     created_at: new Date().toISOString(),
     flagged,
   };
+
+  if (isSupabaseConfigured()) {
+    const { data: inserted, error } = await supabase
+      .from('check_ins')
+      .insert(checkIn)
+      .select()
+      .single();
+    if (!error && inserted) return inserted as CheckIn;
+  }
+
+  const all = readLocal<CheckIn>(STORAGE_KEYS.checkIns);
   all.push(checkIn);
-  write(STORAGE_KEYS.checkIns, all);
+  writeLocal(STORAGE_KEYS.checkIns, all);
   return checkIn;
 }
 
 // ── Symptom Entries (per check-in) ───────────────────────
 
-export function getSymptomEntries(checkInId: string): SymptomEntry[] {
-  return read<SymptomEntry>(STORAGE_KEYS.symptomEntries).filter(
+export async function getSymptomEntries(checkInId: string): Promise<SymptomEntry[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('symptom_entries')
+      .select('*')
+      .eq('check_in_id', checkInId);
+    if (!error && data) return data as SymptomEntry[];
+  }
+  return readLocal<SymptomEntry>(STORAGE_KEYS.symptomEntries).filter(
     (e) => e.check_in_id === checkInId,
   );
 }
 
-export function getSymptomEntriesBySymptom(symptomId: string): SymptomEntry[] {
-  return read<SymptomEntry>(STORAGE_KEYS.symptomEntries).filter(
+export async function getSymptomEntriesBySymptom(symptomId: string): Promise<SymptomEntry[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('symptom_entries')
+      .select('*')
+      .eq('symptom_id', symptomId);
+    if (!error && data) return data as SymptomEntry[];
+  }
+  return readLocal<SymptomEntry>(STORAGE_KEYS.symptomEntries).filter(
     (e) => e.symptom_id === symptomId,
   );
 }
 
-export function createSymptomEntry(data: Omit<SymptomEntry, 'id'>): SymptomEntry {
-  const all = read<SymptomEntry>(STORAGE_KEYS.symptomEntries);
+export async function createSymptomEntry(data: Omit<SymptomEntry, 'id'>): Promise<SymptomEntry> {
   const entry: SymptomEntry = { ...data, id: uuid() };
+
+  if (isSupabaseConfigured()) {
+    const { data: inserted, error } = await supabase
+      .from('symptom_entries')
+      .insert(entry)
+      .select()
+      .single();
+    if (!error && inserted) return inserted as SymptomEntry;
+  }
+
+  const all = readLocal<SymptomEntry>(STORAGE_KEYS.symptomEntries);
   all.push(entry);
-  write(STORAGE_KEYS.symptomEntries, all);
+  writeLocal(STORAGE_KEYS.symptomEntries, all);
   return entry;
 }
 
 // ── Report generation ────────────────────────────────────
 
-export function generateReport(clientId: string) {
-  const client = getClient(clientId);
-  const checkIns = getCheckIns(clientId);
-  const symptoms = getSymptoms(clientId);
+export async function generateReport(clientId: string) {
+  const client = await getClient(clientId);
+  const checkIns = await getCheckIns(clientId);
+  const symptoms = await getSymptoms(clientId);
 
   if (!client || checkIns.length === 0) return null;
 
@@ -166,7 +376,6 @@ export function generateReport(clientId: string) {
 
   const painTrend = sorted.map((c) => c.pain_level);
 
-  // Determine overall trend from symptom_change values
   const changeScores = sorted.map((c) => {
     const map: Record<string, number> = {
       much_better: 2,
@@ -184,33 +393,33 @@ export function generateReport(clientId: string) {
   else if (Math.abs(avgChange) <= 0.5 && changeScores.some((s) => Math.abs(s) >= 2))
     overallTrend = 'mixed';
 
-  // Symptom-level changes
-  const symptomChanges = symptoms
-    .filter((s) => s.active)
-    .map((symptom) => {
-      const entries = getSymptomEntriesBySymptom(symptom.id).sort(
-        (a, b) =>
-          new Date(
-            getCheckIn(a.check_in_id)?.created_at ?? '',
-          ).getTime() -
-          new Date(
-            getCheckIn(b.check_in_id)?.created_at ?? '',
-          ).getTime(),
-      );
-      const start = entries[0]?.severity ?? 0;
-      const end = entries[entries.length - 1]?.severity ?? 0;
-      let trend: 'improving' | 'stable' | 'worsening' = 'stable';
-      if (end < start - 1) trend = 'improving';
-      else if (end > start + 1) trend = 'worsening';
-      return {
-        symptom_name: symptom.name,
-        start_severity: start,
-        end_severity: end,
-        trend,
-      };
-    });
+  const symptomChanges = await Promise.all(
+    symptoms
+      .filter((s) => s.active)
+      .map(async (symptom) => {
+        const entries = await getSymptomEntriesBySymptom(symptom.id);
+        const sortedEntries = [];
+        for (const e of entries) {
+          const ci = await getCheckIn(e.check_in_id);
+          sortedEntries.push({ ...e, ciDate: ci?.created_at ?? '' });
+        }
+        sortedEntries.sort(
+          (a, b) => new Date(a.ciDate).getTime() - new Date(b.ciDate).getTime(),
+        );
+        const start = sortedEntries[0]?.severity ?? 0;
+        const end = sortedEntries[sortedEntries.length - 1]?.severity ?? 0;
+        let trend: 'improving' | 'stable' | 'worsening' = 'stable';
+        if (end < start - 1) trend = 'improving';
+        else if (end > start + 1) trend = 'worsening';
+        return {
+          symptom_name: symptom.name,
+          start_severity: start,
+          end_severity: end,
+          trend,
+        };
+      }),
+  );
 
-  // Flags
   const flags: string[] = [];
   const flaggedDays = sorted.filter((c) => c.flagged);
   if (flaggedDays.length > 0)
@@ -225,13 +434,11 @@ export function generateReport(clientId: string) {
   if (recentWorse.length >= 2)
     flags.push('Worsening trend in the last 3 check-ins');
 
-  // Client notes highlights
   const notesHighlights = sorted
     .filter((c) => c.notes && c.notes.trim().length > 0)
     .slice(-5)
     .map((c) => c.notes);
 
-  // Days between start and end
   const daySpan = Math.max(
     1,
     Math.ceil(
@@ -241,7 +448,6 @@ export function generateReport(clientId: string) {
   );
   const complianceRate = Math.min(100, Math.round((sorted.length / daySpan) * 100));
 
-  // Recommendation
   let recommendation = '';
   if (overallTrend === 'improving')
     recommendation = 'Client is trending positively. Current management approach appears effective. Consider progressing treatment.';
@@ -274,82 +480,196 @@ export function generateReport(clientId: string) {
   };
 }
 
-// ── Demo data seed ───────────────────────────────────────
+// ── Device Tracking ─────────────────────────────────
 
-export function seedDemoData() {
-  if (getClients().length > 0) return; // already seeded
+function detectDeviceType(): DeviceVisit['device_type'] {
+  const ua = navigator.userAgent;
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document)) return 'ipad';
+  if (/iPhone/.test(ua)) return 'iphone';
+  if (/Macintosh/.test(ua)) return 'mac';
+  if (/Android/.test(ua) && /Mobile/.test(ua)) return 'android';
+  if (/Windows/.test(ua)) return 'windows';
+  return 'other';
+}
 
-  const client = createClient({
-    full_name: 'Sarah Mitchell',
-    email: 'sarah@example.com',
-    practitioner_id: 'demo-practitioner',
-    next_appointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    primary_complaint: 'Lower back pain with intermittent left leg radiculopathy',
-    notes: 'Office worker, sedentary lifestyle. Started treatment 2 weeks ago.',
-  });
+export async function trackDeviceVisit(clientId: string | null, page: string): Promise<DeviceVisit> {
+  const visit: DeviceVisit = {
+    id: uuid(),
+    client_id: clientId,
+    device_type: detectDeviceType(),
+    user_agent: navigator.userAgent,
+    screen_width: window.screen.width,
+    screen_height: window.screen.height,
+    visited_at: new Date().toISOString(),
+    page,
+  };
 
-  const s1 = createSymptom({
-    client_id: client.id,
-    name: 'Lower back pain',
-    body_area: 'Lumbar spine',
-    active: true,
-  });
+  if (isSupabaseConfigured()) {
+    await supabase.from('device_visits').insert(visit);
+  }
 
-  const s2 = createSymptom({
-    client_id: client.id,
-    name: 'Left leg tingling',
-    body_area: 'Left leg',
-    active: true,
-  });
+  const all = readLocal<DeviceVisit>(STORAGE_KEYS.deviceVisits);
+  all.push(visit);
+  writeLocal(STORAGE_KEYS.deviceVisits, all);
+  return visit;
+}
 
-  const s3 = createSymptom({
-    client_id: client.id,
-    name: 'Morning stiffness',
-    body_area: 'Lumbar spine',
-    active: true,
-  });
+export function getDeviceVisits(): DeviceVisit[] {
+  return readLocal<DeviceVisit>(STORAGE_KEYS.deviceVisits);
+}
 
-  // Seed 7 days of check-ins
-  const demoCheckIns: Omit<CheckIn, 'id' | 'created_at' | 'flagged'>[] = [
-    { client_id: client.id, overall_feeling: 2, symptom_change: 'same', pain_level: 7, sleep_quality: 2, stress_level: 4, medication_taken: true, notes: 'Bad day at work, sitting for 8 hours straight. Back was really sore by evening.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'slightly_better', pain_level: 6, sleep_quality: 3, stress_level: 3, medication_taken: true, notes: 'Did the stretches this morning. Felt a bit better during the day.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'same', pain_level: 6, sleep_quality: 3, stress_level: 3, medication_taken: false, notes: 'Walked for 30 minutes at lunch. No change really.' },
-    { client_id: client.id, overall_feeling: 2, symptom_change: 'slightly_worse', pain_level: 8, sleep_quality: 2, stress_level: 4, medication_taken: true, notes: 'Tried to garden today and it flared up badly. Leg tingling came back.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'slightly_better', pain_level: 5, sleep_quality: 3, stress_level: 3, medication_taken: true, notes: 'Rested yesterday evening. Pain settled down overnight.' },
-    { client_id: client.id, overall_feeling: 4, symptom_change: 'slightly_better', pain_level: 4, sleep_quality: 4, stress_level: 2, medication_taken: false, notes: 'Good day. Did exercises morning and evening. Back felt manageable.' },
-    { client_id: client.id, overall_feeling: 3, symptom_change: 'same', pain_level: 5, sleep_quality: 3, stress_level: 3, medication_taken: false, notes: 'Steady day. Not much change from yesterday.' },
-  ];
+export function getDeviceAnalytics() {
+  const visits = getDeviceVisits();
+  const total = visits.length;
 
-  const severities = [
-    [7, 5, 6],
-    [6, 4, 5],
-    [6, 4, 5],
-    [8, 7, 7],
-    [5, 3, 4],
-    [4, 2, 3],
-    [5, 3, 4],
-  ];
+  const byDevice: Record<string, number> = {};
+  const byPage: Record<string, number> = {};
 
-  demoCheckIns.forEach((data, i) => {
-    // Backdate each check-in
-    const allCheckIns = read<CheckIn>(STORAGE_KEYS.checkIns);
-    const checkIn: CheckIn = {
-      ...data,
-      id: uuid(),
-      created_at: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString(),
-      flagged: data.pain_level >= 8 || data.symptom_change === 'much_worse' || data.overall_feeling <= 1,
+  for (const v of visits) {
+    byDevice[v.device_type] = (byDevice[v.device_type] || 0) + 1;
+    byPage[v.page] = (byPage[v.page] || 0) + 1;
+  }
+
+  const deviceBreakdown = Object.entries(byDevice)
+    .map(([device, count]) => ({
+      device: device as DeviceVisit['device_type'],
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const pageBreakdown = Object.entries(byPage)
+    .map(([page, count]) => ({ page, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { total, deviceBreakdown, pageBreakdown };
+}
+
+// ── Compliance Rating ────────────────────────────────────
+
+export interface ComplianceRating {
+  score: number; // 0-100
+  grade: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'No Data';
+  color: string;
+  breakdown: {
+    frequency: { score: number; label: string; detail: string };
+    engagement: { score: number; label: string; detail: string };
+    variability: { score: number; label: string; detail: string };
+    recency: { score: number; label: string; detail: string };
+  };
+}
+
+export function calculateComplianceRating(client: Client, checkIns: CheckIn[]): ComplianceRating {
+  if (checkIns.length === 0) {
+    return {
+      score: 0,
+      grade: 'No Data',
+      color: '#94a3b8',
+      breakdown: {
+        frequency: { score: 0, label: 'Frequency', detail: 'No check-ins yet' },
+        engagement: { score: 0, label: 'Engagement', detail: 'No data to evaluate' },
+        variability: { score: 0, label: 'Variability', detail: 'No data to evaluate' },
+        recency: { score: 0, label: 'Recency', detail: 'No check-ins yet' },
+      },
     };
-    allCheckIns.push(checkIn);
-    write(STORAGE_KEYS.checkIns, allCheckIns);
+  }
 
-    // Add symptom entries
-    [s1, s2, s3].forEach((symptom, j) => {
-      createSymptomEntry({
-        check_in_id: checkIn.id,
-        symptom_id: symptom.id,
-        severity: severities[i][j],
-        notes: '',
-      });
-    });
-  });
+  const sorted = [...checkIns].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  // 1. FREQUENCY (35%) — how often they check in relative to days since start
+  const startDate = new Date(client.created_at);
+  const now = new Date();
+  const totalDays = Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const uniqueDays = new Set(sorted.map((c) => c.created_at.slice(0, 10))).size;
+  const freqRatio = Math.min(1, uniqueDays / totalDays);
+  const freqScore = Math.round(freqRatio * 100);
+  let freqDetail = '';
+  if (freqRatio >= 0.8) freqDetail = `Checked in ${uniqueDays} of ${totalDays} days — very consistent`;
+  else if (freqRatio >= 0.5) freqDetail = `Checked in ${uniqueDays} of ${totalDays} days — moderate consistency`;
+  else freqDetail = `Only ${uniqueDays} of ${totalDays} days — needs encouragement`;
+
+  // 2. ENGAGEMENT (30%) — are they writing notes, not just clicking through?
+  const withNotes = sorted.filter((c) => c.notes && c.notes.trim().length > 10).length;
+  const notesRatio = withNotes / sorted.length;
+  // Check for variation in answers (not always picking the same values)
+  const uniqueFeelings = new Set(sorted.map((c) => c.overall_feeling)).size;
+  const uniqueChanges = new Set(sorted.map((c) => c.symptom_change)).size;
+  const answerDiversity = Math.min(1, (uniqueFeelings + uniqueChanges) / 6); // max 5+5=10 options
+  const engScore = Math.round(((notesRatio * 0.6) + (answerDiversity * 0.4)) * 100);
+  let engDetail = '';
+  if (notesRatio >= 0.5) engDetail = `${withNotes} of ${sorted.length} check-ins include detailed notes`;
+  else if (notesRatio >= 0.2) engDetail = `Some notes provided — could be more detailed`;
+  else engDetail = `Rarely writes notes — may be rushing through check-ins`;
+
+  // 3. VARIABILITY (20%) — are responses suspiciously identical? (suggests generic answers)
+  const painValues = sorted.map((c) => c.pain_level);
+  const sleepValues = sorted.map((c) => c.sleep_quality);
+  const stressValues = sorted.map((c) => c.stress_level);
+
+  function stdDev(arr: number[]): number {
+    if (arr.length <= 1) return 0;
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    return Math.sqrt(arr.reduce((sum, v) => sum + (v - mean) ** 2, 0) / arr.length);
+  }
+
+  const painStd = stdDev(painValues);
+  const sleepStd = stdDev(sleepValues);
+  const stressStd = stdDev(stressValues);
+  // If all answers are identical (std=0), score is 0. Some variation is healthy.
+  const avgStd = (painStd + sleepStd * 2 + stressStd * 2) / 5; // scale sleep/stress (1-5) vs pain (0-10)
+  const varScore = Math.round(Math.min(1, avgStd / 1.5) * 100); // 1.5+ std dev = full marks
+  let varDetail = '';
+  if (varScore >= 70) varDetail = 'Answers show natural day-to-day variation — appears genuine';
+  else if (varScore >= 30) varDetail = 'Some variation in responses — mostly authentic';
+  else varDetail = 'Responses are very uniform — may be giving generic answers';
+
+  // 4. RECENCY (15%) — are they still active?
+  const lastCheckIn = sorted[sorted.length - 1];
+  const daysSinceLast = Math.max(0, Math.ceil((now.getTime() - new Date(lastCheckIn.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+  let recScore = 100;
+  if (daysSinceLast <= 1) recScore = 100;
+  else if (daysSinceLast <= 3) recScore = 80;
+  else if (daysSinceLast <= 7) recScore = 50;
+  else if (daysSinceLast <= 14) recScore = 20;
+  else recScore = 0;
+  let recDetail = '';
+  if (daysSinceLast === 0) recDetail = 'Checked in today';
+  else if (daysSinceLast === 1) recDetail = 'Last check-in was yesterday';
+  else recDetail = `Last check-in was ${daysSinceLast} days ago`;
+
+  // Weighted total
+  const total = Math.round(
+    freqScore * 0.35 +
+    engScore * 0.30 +
+    varScore * 0.20 +
+    recScore * 0.15
+  );
+
+  let grade: ComplianceRating['grade'];
+  let color: string;
+  if (total >= 80) { grade = 'Excellent'; color = '#10b981'; }
+  else if (total >= 60) { grade = 'Good'; color = '#6366f1'; }
+  else if (total >= 40) { grade = 'Fair'; color = '#f59e0b'; }
+  else { grade = 'Poor'; color = '#ef4444'; }
+
+  return {
+    score: total,
+    grade,
+    color,
+    breakdown: {
+      frequency: { score: freqScore, label: 'Frequency', detail: freqDetail },
+      engagement: { score: engScore, label: 'Engagement', detail: engDetail },
+      variability: { score: varScore, label: 'Variability', detail: varDetail },
+      recency: { score: recScore, label: 'Recency', detail: recDetail },
+    },
+  };
+}
+
+// ── Seed data (no-op in production) ──────────────────────
+
+export async function seedDefaultClients() {
+  // No seeding needed — all real client data lives in Supabase
+  // and persists across deploys.
 }

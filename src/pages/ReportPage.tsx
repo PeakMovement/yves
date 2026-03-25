@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useActiveClient } from '../hooks/useClient';
 import { generateReport, getCheckIns } from '../lib/store';
-import type { FollowUpReport } from '../types/database';
+import type { CheckIn, FollowUpReport } from '../types/database';
 import MiniChart from '../components/MiniChart';
 import {
   formatDate,
@@ -24,17 +24,22 @@ import {
 export default function ReportPage() {
   const client = useActiveClient();
   const [report, setReport] = useState<FollowUpReport | null>(null);
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (client) {
-      const r = generateReport(client.id);
-      setReport(r);
+      (async () => {
+        const r = await generateReport(client.id);
+        setReport(r);
+        const cis = await getCheckIns(client.id);
+        setCheckIns(cis);
+        setLoading(false);
+      })();
     }
   }, [client]);
 
-  if (!client) return <div className="page-loading">Loading...</div>;
-
-  const checkIns = getCheckIns(client.id);
+  if (!client || loading) return <div className="page-loading">Loading...</div>;
 
   if (!report || checkIns.length === 0) {
     return (

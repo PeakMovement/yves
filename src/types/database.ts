@@ -7,6 +7,9 @@ export interface Client {
   next_appointment: string | null;
   primary_complaint: string;
   notes: string | null;
+  login_code: string;
+  tracking_duration_weeks: number | null;
+  tracking_end_date: string | null;
 }
 
 export interface CheckIn {
@@ -38,6 +41,17 @@ export interface SymptomEntry {
   symptom_id: string;
   severity: number; // 0-10
   notes: string;
+}
+
+export interface DeviceVisit {
+  id: string;
+  client_id: string | null;
+  device_type: 'iphone' | 'ipad' | 'mac' | 'android' | 'windows' | 'other';
+  user_agent: string;
+  screen_width: number;
+  screen_height: number;
+  visited_at: string;
+  page: string;
 }
 
 export interface FollowUpReport {
