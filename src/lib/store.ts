@@ -33,8 +33,9 @@ function uuid(): string {
 }
 
 function isSupabaseConfigured(): boolean {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  return !!url && !url.includes('placeholder');
+  const url = import.meta.env.VITE_SUPABASE_URL || 'https://teehpkaxgqnzwqtmxfhe.supabase.co';
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  return !!url && !url.includes('placeholder') && (!!key || url.includes('teehpkaxgqnzwqtmxfhe'));
 }
 
 // ── Login codes ─────────────────────────────────────────
