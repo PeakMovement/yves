@@ -33,6 +33,7 @@ import {
   Minus,
   Calendar,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 
 export default function AdminClientDetailPage() {
@@ -74,6 +75,70 @@ export default function AdminClientDetailPage() {
     const r = await generateReport(clientId);
     setReport(r);
     setShowReport(true);
+  }
+
+  function handleDownloadReport() {
+    if (!report || !client) return;
+    const s = report.summary;
+    const trendText = trendLabel(s.overall_trend);
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Report - ${client.full_name}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #1e293b; padding: 48px 40px; max-width: 800px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .brand { text-align: center; margin-bottom: 8px; }
+  .brand h1 { font-size: 28px; font-weight: 800; letter-spacing: 0.18em; }
+  .brand-sub { font-size: 13px; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; }
+  .divider { height: 1px; background: #e2e8f0; margin: 20px 0; }
+  .client-row { display: flex; justify-content: space-between; }
+  .client-row h2 { font-size: 18px; font-weight: 700; }
+  .client-row p { font-size: 13px; color: #64748b; margin-top: 2px; }
+  .right { text-align: right; }
+  .right p { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+  .trend { display: inline-block; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; margin-bottom: 20px; }
+  .trend-caption { font-size: 13px; color: #94a3b8; margin-left: 12px; }
+  .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 24px 0 12px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .metric { text-align: center; padding: 16px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .metric-val { font-size: 26px; font-weight: 800; display: block; }
+  .metric-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+  .symptom-row { display: flex; justify-content: space-between; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; }
+  .flag { font-size: 13px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
+  .note { font-size: 13px; color: #64748b; font-style: italic; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; }
+  .rec { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+  .rec p { font-size: 14px; color: #166534; font-weight: 500; line-height: 1.6; }
+  .footer { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .footer-brand { font-weight: 800; letter-spacing: 0.15em; }
+  @media print { body { padding: 20px; } }
+</style></head><body>
+<div class="brand"><h1>PEAK MOVEMENT</h1><div class="brand-sub">Client Follow-Up Report</div></div>
+<div class="divider"></div>
+<div class="client-row"><div><h2>${client.full_name}</h2><p>${client.primary_complaint || ''}</p></div><div class="right"><p>${formatDate(report.period_start)} – ${formatDate(report.period_end)}</p><p>${report.total_check_ins} check-in${report.total_check_ins !== 1 ? 's' : ''} recorded</p></div></div>
+<div class="divider"></div>
+<div><span class="trend" style="background:${trendColor(s.overall_trend)}15;color:${trendColor(s.overall_trend)};border:1.5px solid ${trendColor(s.overall_trend)}30">${trendText}</span><span class="trend-caption">Overall trend across reporting period</span></div>
+<div class="section-title">Key Metrics</div>
+<div class="metrics">
+  <div class="metric"><span class="metric-val" style="color:${painColor(s.avg_pain_level)}">${s.avg_pain_level}</span><span class="metric-label">Avg Pain</span></div>
+  <div class="metric"><span class="metric-val">${s.avg_sleep_quality}/5</span><span class="metric-label">Avg Sleep</span></div>
+  <div class="metric"><span class="metric-val">${s.avg_stress_level}/5</span><span class="metric-label">Avg Stress</span></div>
+  <div class="metric"><span class="metric-val">${report.compliance_rate}%</span><span class="metric-label">Compliance</span></div>
+</div>
+${s.symptom_changes.length > 0 ? `<div class="section-title">Symptom Changes</div>${s.symptom_changes.map(sc => `<div class="symptom-row"><span>${sc.symptom_name}</span><span>${sc.start_severity} → ${sc.end_severity}</span><span style="color:${trendColor(sc.trend)}">${trendLabel(sc.trend)}</span></div>`).join('')}` : ''}
+${s.flags.length > 0 ? `<div class="section-title">Flags</div>${s.flags.map(f => `<div class="flag">${f}</div>`).join('')}` : ''}
+${s.client_notes_highlights.length > 0 ? `<div class="section-title">Client Notes</div>${s.client_notes_highlights.map(n => `<div class="note">"${n}"</div>`).join('')}` : ''}
+<div class="section-title">Clinical Recommendation</div>
+<div class="rec"><p>${s.recommendation_for_practitioner}</p></div>
+<div class="divider"></div>
+<div class="footer"><span class="footer-brand">PEAK MOVEMENT</span><span>Report ${report.id.slice(0, 8)} | Generated ${formatDate(report.generated_at)}</span></div>
+<script>window.onload = function() { window.print(); }</script>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   }
 
   if (loading) return <div className="page-loading">Loading...</div>;
@@ -120,10 +185,18 @@ export default function AdminClientDetailPage() {
             <span>{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        <button className="btn btn-primary generate-report-btn" onClick={handleGenerateReport}>
-          <FileText size={18} />
-          Generate Report
-        </button>
+        <div className="detail-actions">
+          <button className="btn btn-primary generate-report-btn" onClick={handleGenerateReport}>
+            <FileText size={18} />
+            Generate Report
+          </button>
+          {showReport && report && (
+            <button className="btn btn-ghost generate-report-btn" onClick={handleDownloadReport}>
+              <Download size={18} />
+              Download PDF
+            </button>
+          )}
+        </div>
       </div>
 
       {client.notes && (
