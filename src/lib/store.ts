@@ -1,4 +1,4 @@
-import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit } from '../types/database';
+import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit, Practitioner } from '../types/database';
 import { supabase } from './supabase';
 
 // Supabase-backed store with localStorage cache.
@@ -667,9 +667,114 @@ export function calculateComplianceRating(client: Client, checkIns: CheckIn[]): 
   };
 }
 
-// ── Seed data (no-op in production) ──────────────────────
+// ── Practitioners ────────────────────────────────────────
+
+export async function getPractitioners(): Promise<Practitioner[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .order('full_name');
+    if (!error && data) return data as Practitioner[];
+  }
+  return readLocal<Practitioner>('buddy_practitioners');
+}
+
+export async function getPractitioner(id: string): Promise<Practitioner | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!error && data) return data as Practitioner;
+  }
+  return readLocal<Practitioner>('buddy_practitioners').find((p) => p.id === id);
+}
+
+export async function getPractitionerByLoginCode(code: string): Promise<Practitioner | undefined> {
+  const upper = code.toUpperCase();
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .eq('login_code', upper)
+      .single();
+    if (!error && data) return data as Practitioner;
+  }
+  return readLocal<Practitioner>('buddy_practitioners').find(
+    (p) => p.login_code === upper,
+  );
+}
+
+export async function updatePractitionerCode(id: string, newCode: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    const { error } = await supabase
+      .from('practitioners')
+      .update({ login_code: newCode.toUpperCase() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function getClientsByPractitioner(practitionerId: string): Promise<Client[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('practitioner_id', practitionerId)
+      .order('created_at', { ascending: false });
+    if (!error && data) return data as Client[];
+  }
+  return readLocal<Client>(STORAGE_KEYS.clients).filter((c) => c.practitioner_id === practitionerId);
+}
+
+// ── Client code change ──────────────────────────────────
+
+export async function updateClientLoginCode(clientId: string, newCode: string): Promise<void> {
+  const upper = newCode.toUpperCase();
+  if (isSupabaseConfigured()) {
+    const { error } = await supabase
+      .from('clients')
+      .update({ login_code: upper })
+      .eq('id', clientId);
+    if (error) {
+      throw new Error(error.message.includes('duplicate')
+        ? 'This code is already in use.'
+        : error.message);
+    }
+  }
+  const clients = readLocal<Client>(STORAGE_KEYS.clients);
+  const idx = clients.findIndex((c) => c.id === clientId);
+  if (idx !== -1) {
+    clients[idx].login_code = upper;
+    writeLocal(STORAGE_KEYS.clients, clients);
+  }
+}
+
+// ── Seed practitioners ──────────────────────────────────
+
+const DEFAULT_PRACTITIONERS: Omit<Practitioner, 'id' | 'created_at'>[] = [
+  { full_name: 'Luyolo', email: '', login_code: 'LUY001', role: 'practitioner' },
+  { full_name: 'Zoe', email: '', login_code: 'ZOE001', role: 'practitioner' },
+  { full_name: 'Kashmira', email: '', login_code: 'KAS001', role: 'practitioner' },
+  { full_name: 'Tayla', email: '', login_code: 'TAY001', role: 'practitioner' },
+  { full_name: 'Tasneem', email: '', login_code: 'TAS001', role: 'practitioner' },
+];
+
+export async function seedPractitioners(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const existing = await getPractitioners();
+  if (existing.length > 0) return; // already seeded
+  for (const p of DEFAULT_PRACTITIONERS) {
+    await supabase.from('practitioners').insert({
+      ...p,
+      id: uuid(),
+      created_at: new Date().toISOString(),
+    });
+  }
+}
 
 export async function seedDefaultClients() {
-  // No seeding needed — all real client data lives in Supabase
-  // and persists across deploys.
+  await seedPractitioners();
 }

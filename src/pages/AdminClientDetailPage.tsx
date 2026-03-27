@@ -7,6 +7,7 @@ import {
   getSymptomEntriesBySymptom,
   generateReport,
   calculateComplianceRating,
+  updateClientLoginCode,
 } from '../lib/store';
 import type { Client, CheckIn, Symptom, FollowUpReport } from '../types/database';
 import type { ComplianceRating } from '../lib/store';
@@ -34,6 +35,7 @@ import {
   Calendar,
   ShieldCheck,
   Download,
+  Edit3,
 } from 'lucide-react';
 
 export default function AdminClientDetailPage() {
@@ -48,6 +50,9 @@ export default function AdminClientDetailPage() {
   const [showReport, setShowReport] = useState(false);
   const [compliance, setCompliance] = useState<ComplianceRating | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingCode, setEditingCode] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [codeError, setCodeError] = useState('');
 
   useEffect(() => {
     if (clientId) {
@@ -141,6 +146,20 @@ ${s.client_notes_highlights.length > 0 ? `<div class="section-title">Client Note
     }
   }
 
+  async function handleChangeCode() {
+    if (!clientId || !newCode.trim()) return;
+    setCodeError('');
+    try {
+      await updateClientLoginCode(clientId, newCode.trim());
+      const updated = await getClient(clientId);
+      if (updated) setClient(updated);
+      setEditingCode(false);
+      setNewCode('');
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : 'Failed to update code.');
+    }
+  }
+
   if (loading) return <div className="page-loading">Loading...</div>;
 
   if (!client) {
@@ -177,13 +196,34 @@ ${s.client_notes_highlights.length > 0 ? `<div class="section-title">Client Note
           <h2>{client.full_name}</h2>
           <p className="detail-complaint">{client.primary_complaint}</p>
           <div className="detail-meta">
-            <span className="acr-code">Code: {client.login_code}</span>
+            <span className="acr-code">
+              Code: {client.login_code}
+              <button className="btn-inline-edit" onClick={() => { setEditingCode(!editingCode); setNewCode(''); setCodeError(''); }} title="Change code">
+                <Edit3 size={12} />
+              </button>
+            </span>
             {client.email && <span>{client.email}</span>}
             {client.next_appointment && (
               <span><Calendar size={12} /> Next: {formatDate(client.next_appointment)}</span>
             )}
             <span>{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}</span>
           </div>
+          {editingCode && (
+            <div className="change-code-form">
+              <input
+                type="text"
+                placeholder="New login code"
+                value={newCode}
+                onChange={(e) => { setNewCode(e.target.value.toUpperCase()); setCodeError(''); }}
+                maxLength={6}
+                autoFocus
+                autoComplete="off"
+              />
+              <button className="btn btn-primary btn-sm" onClick={handleChangeCode} disabled={!newCode.trim()}>Save</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingCode(false)}>Cancel</button>
+              {codeError && <p className="login-error">{codeError}</p>}
+            </div>
+          )}
         </div>
         <div className="detail-actions">
           <button className="btn btn-primary generate-report-btn" onClick={handleGenerateReport}>

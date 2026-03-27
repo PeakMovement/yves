@@ -1,6 +1,19 @@
 -- Buddy App – Supabase schema
 -- Run this in the Supabase SQL Editor to create the required tables.
 
+-- ── Practitioners ───────────────────────────────────────
+create table if not exists practitioners (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  email text not null default '',
+  login_code text not null unique,
+  role text not null default 'practitioner' check (role in ('admin', 'practitioner')),
+  created_at timestamptz not null default now()
+);
+
+alter table practitioners enable row level security;
+create policy "Allow all for anon" on practitioners for all using (true) with check (true);
+
 -- ── Clients ─────────────────────────────────────────────
 create table if not exists clients (
   id uuid primary key default gen_random_uuid(),
