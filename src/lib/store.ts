@@ -755,23 +755,27 @@ export async function updateClientLoginCode(clientId: string, newCode: string): 
 // ── Seed practitioners ──────────────────────────────────
 
 const DEFAULT_PRACTITIONERS: Omit<Practitioner, 'id' | 'created_at'>[] = [
-  { full_name: 'Luyolo', email: '', login_code: 'LUY001', role: 'practitioner' },
-  { full_name: 'Zoe', email: '', login_code: 'ZOE001', role: 'practitioner' },
-  { full_name: 'Kashmira', email: '', login_code: 'KAS001', role: 'practitioner' },
-  { full_name: 'Tayla', email: '', login_code: 'TAY001', role: 'practitioner' },
-  { full_name: 'Tasneem', email: '', login_code: 'TAS001', role: 'practitioner' },
+  { full_name: 'Luyolo', email: '', login_code: '2001', role: 'practitioner' },
+  { full_name: 'Zoe', email: '', login_code: '2002', role: 'practitioner' },
+  { full_name: 'Kashmira', email: '', login_code: '2003', role: 'practitioner' },
+  { full_name: 'Tayla', email: '', login_code: '2004', role: 'practitioner' },
+  { full_name: 'Tasneem', email: '', login_code: '2005', role: 'practitioner' },
+  { full_name: 'Justin', email: '', login_code: '2006', role: 'practitioner' },
 ];
 
 export async function seedPractitioners(): Promise<void> {
   if (!isSupabaseConfigured()) return;
   const existing = await getPractitioners();
-  if (existing.length > 0) return; // already seeded
+  // Insert any missing practitioners
+  const existingCodes = new Set(existing.map((p) => p.login_code));
   for (const p of DEFAULT_PRACTITIONERS) {
-    await supabase.from('practitioners').insert({
-      ...p,
-      id: uuid(),
-      created_at: new Date().toISOString(),
-    });
+    if (!existingCodes.has(p.login_code)) {
+      await supabase.from('practitioners').insert({
+        ...p,
+        id: uuid(),
+        created_at: new Date().toISOString(),
+      });
+    }
   }
 }
 
