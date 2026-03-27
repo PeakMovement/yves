@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient, getClientsByPractitioner } from '../lib/store';
+import { getLoggedInPractitioner } from '../components/AdminLayout';
 import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
 import type { Client, CheckIn } from '../types/database';
 import { formatDate } from '../lib/utils';
@@ -33,8 +34,14 @@ export default function AdminClientsPage() {
     custom_code: '',
   });
 
+  const session = getLoggedInPractitioner();
+
   async function loadClients() {
-    const clients = await getClients();
+    const clients = session?.type === 'admin'
+      ? await getClients()
+      : session?.practitionerId
+        ? await getClientsByPractitioner(session.practitionerId)
+        : [];
     const result: ClientRow[] = [];
     for (const client of clients) {
       const checkIns = await getCheckIns(client.id);
@@ -63,7 +70,7 @@ export default function AdminClientsPage() {
       client = await createClient({
         full_name: newClient.full_name.trim(),
         email: newClient.email.trim(),
-        practitioner_id: 'demo-practitioner',
+        practitioner_id: session?.practitionerId || 'admin',
         next_appointment: null,
         primary_complaint: newClient.primary_complaint,
         notes: null,

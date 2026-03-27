@@ -1,3 +1,12 @@
+export interface Practitioner {
+  id: string;
+  full_name: string;
+  email: string;
+  login_code: string;
+  role: 'admin' | 'practitioner';
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   full_name: string;

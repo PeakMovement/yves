@@ -1252,6 +1252,122 @@ body {
   gap: 8px;
 }
 
+/* ── Team Overview ──────────────────────────────────── */
+.team-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.team-member-card {
+  padding: 16px;
+}
+
+.team-member-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.team-member-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.team-member-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.team-member-code {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.team-member-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.team-stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.team-stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.team-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Change Code Form ───────────────────────────────── */
+.btn-inline-edit {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: 4px;
+  border-radius: 4px;
+}
+
+.btn-inline-edit:hover {
+  background: #eef2ff;
+}
+
+.change-code-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.change-code-form input {
+  width: 120px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.change-code-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.change-code-form .login-error {
+  width: 100%;
+  margin-top: 0;
+}
+
 .generate-report-btn {
   white-space: nowrap;
   padding: 12px 20px;
