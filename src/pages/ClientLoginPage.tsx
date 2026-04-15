@@ -108,6 +108,20 @@ export default function ClientLoginPage() {
             {loading ? 'Checking...' : 'Log in'}
           </button>
         </form>
+
+        <div style={{ marginTop: '24px', textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+          <p style={{ marginBottom: '12px', color: '#6b7280', fontSize: '14px' }}>
+            Don't have a login code?
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate('/app/register')}
+            style={{ width: '100%' }}
+          >
+            Create an account
+          </button>
+        </div>
       </div>
     </div>
   );
