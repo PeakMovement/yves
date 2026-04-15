@@ -182,6 +182,44 @@ body {
   font-size: 13px;
 }
 
+/* ── Schedule Buttons ────────────────────────────────────── */
+.schedule-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.schedule-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.schedule-btn:hover {
+  border-color: var(--primary-light);
+  background: #eef2ff;
+}
+
+.schedule-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.schedule-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Progress Bar ────────────────────────────────────── */
 .progress-bar {
   height: 4px;

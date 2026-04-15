@@ -34,9 +34,10 @@ function uuid(): string {
 }
 
 function isSupabaseConfigured(): boolean {
-  const url = import.meta.env.VITE_SUPABASE_URL || 'https://teehpkaxgqnzwqtmxfhe.supabase.co';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  return !!url && !url.includes('placeholder') && (!!key || url.includes('teehpkaxgqnzwqtmxfhe'));
+  // Check if both required Supabase env vars are configured
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return !!url && !!key && !url.includes('placeholder') && !key.includes('placeholder');
 }
 
 // ── Login codes ─────────────────────────────────────────
@@ -49,10 +50,19 @@ function generateLoginCode(): string {
   return code.toString();
 }
 
-async function generateUniqueLoginCode(): Promise<string> {
+async function generateUniqueLoginCode(retries = 0): Promise<string> {
+  // Prevent infinite recursion with max retries
+  if (retries > 10) {
+    throw new Error('Failed to generate unique login code after 10 attempts. Too many clients exist.');
+  }
+
   const code = generateLoginCode();
   const existing = await getClients();
-  if (existing.some((c) => c.login_code === code)) return generateUniqueLoginCode();
+
+  if (existing.some((c) => c.login_code === code)) {
+    return generateUniqueLoginCode(retries + 1);
+  }
+
   return code;
 }
 

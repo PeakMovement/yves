@@ -4,6 +4,7 @@ import ClientLayout from './components/ClientLayout';
 import AdminLayout from './components/AdminLayout';
 import PortalSelectPage from './pages/PortalSelectPage';
 import ClientLoginPage from './pages/ClientLoginPage';
+import ClientRegistrationPage from './pages/ClientRegistrationPage';
 import PractitionerLoginPage from './pages/PractitionerLoginPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import CheckInPage from './pages/CheckInPage';
@@ -27,6 +28,9 @@ function App() {
 
         {/* Client Login */}
         <Route path="/app/login" element={<ClientLoginPage />} />
+
+        {/* Client Registration */}
+        <Route path="/app/register" element={<ClientRegistrationPage />} />
 
         {/* Practitioner Login */}
         <Route path="/admin/login" element={<PractitionerLoginPage />} />
