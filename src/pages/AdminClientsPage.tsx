@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient, getPractitioners } from '../lib/store';
 import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
-import type { Client, CheckIn } from '../types/database';
+import type { Client, CheckIn, Practitioner } from '../types/database';
 import { formatDate } from '../lib/utils';
 import { UserPlus, CheckCircle, AlertCircle, AlertTriangle, ArrowRight, Copy, Check, Calendar, Trash2, Mail, Send, Settings, X, Loader } from 'lucide-react';
 
@@ -24,6 +24,8 @@ export default function AdminClientsPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showWebhookConfig, setShowWebhookConfig] = useState(false);
   const [webhookUrl, setWebhookUrlState] = useState(getWebhookUrl());
+  const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
+  const [selectedPractitioner, setSelectedPractitioner] = useState('');
   const [newClient, setNewClient] = useState({
     full_name: '',
     email: '',
@@ -46,6 +48,15 @@ export default function AdminClientsPage() {
 
   useEffect(() => {
     loadClients();
+    (async () => {
+      try {
+        const list = await getPractitioners();
+        setPractitioners(list);
+        if (list.length > 0) setSelectedPractitioner(list[0].id);
+      } catch (err) {
+        console.error('Failed to load practitioners:', err);
+      }
+    })();
   }, []);
 
   async function handleCreate() {
@@ -58,12 +69,17 @@ export default function AdminClientsPage() {
       weeks = Math.max(1, Math.round(diffMs / (7 * 24 * 60 * 60 * 1000)));
     }
 
+    if (!selectedPractitioner) {
+      setCreateError('Please select a practitioner');
+      return;
+    }
+
     let client;
     try {
       client = await createClient({
         full_name: newClient.full_name.trim(),
         email: newClient.email.trim(),
-        practitioner_id: 'demo-practitioner',
+        practitioner_id: selectedPractitioner,
         next_appointment: null,
         primary_complaint: newClient.primary_complaint,
         notes: null,
@@ -161,6 +177,23 @@ export default function AdminClientsPage() {
       {showForm && !createdClient && (
         <div className="card add-client-form">
           <h3>New Client</h3>
+          <div>
+            <label className="form-label" htmlFor="practitioner">
+              Select practitioner:
+            </label>
+            <select
+              id="practitioner"
+              className="form-input"
+              value={selectedPractitioner}
+              onChange={(e) => setSelectedPractitioner(e.target.value)}
+            >
+              {practitioners.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <input
             type="text"
             placeholder="Full name"

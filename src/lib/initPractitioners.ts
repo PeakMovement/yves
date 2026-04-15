@@ -7,12 +7,12 @@ interface DefaultPractitioner {
 }
 
 const DEFAULT_PRACTITIONERS: DefaultPractitioner[] = [
-  { name: 'Zoe', loginCode: 'ZOE001', initialPassword: 'password' },
-  { name: 'Justin', loginCode: 'JUS001', initialPassword: 'password' },
-  { name: 'Edrich', loginCode: 'EDR001', initialPassword: 'password' },
-  { name: 'Luyolo', loginCode: 'LUY001', initialPassword: 'password' },
-  { name: 'Tayla', loginCode: 'TAY001', initialPassword: 'password' },
-  { name: 'Tasneem', loginCode: 'TAS001', initialPassword: 'password' },
+  { name: 'Zoe', loginCode: '1001', initialPassword: 'password' },
+  { name: 'Justin', loginCode: '1002', initialPassword: 'password' },
+  { name: 'Edrich', loginCode: '1003', initialPassword: 'password' },
+  { name: 'Luyolo', loginCode: '1004', initialPassword: 'password' },
+  { name: 'Tayla', loginCode: '1005', initialPassword: 'password' },
+  { name: 'Tasneem', loginCode: '1006', initialPassword: 'password' },
 ];
 
 export async function initializePractitioners() {

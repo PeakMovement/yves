@@ -42,12 +42,11 @@ function isSupabaseConfigured(): boolean {
 // ── Login codes ─────────────────────────────────────────
 
 function generateLoginCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+  // Generate a 4-digit numeric code (1000-9999)
+  const min = 1000;
+  const max = 9999;
+  const code = Math.floor(Math.random() * (max - min + 1)) + min;
+  return code.toString();
 }
 
 async function generateUniqueLoginCode(): Promise<string> {
@@ -86,17 +85,17 @@ export async function getClient(id: string): Promise<Client | undefined> {
 }
 
 export async function getClientByLoginCode(code: string): Promise<Client | undefined> {
-  const upper = code.toUpperCase();
+  const normalized = code.trim();
   if (isSupabaseConfigured()) {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('login_code', upper)
+      .eq('login_code', normalized)
       .single();
     if (!error && data) return data as Client;
   }
   return readLocal<Client>(STORAGE_KEYS.clients).find(
-    (c) => c.login_code === upper,
+    (c) => c.login_code === normalized,
   );
 }
 

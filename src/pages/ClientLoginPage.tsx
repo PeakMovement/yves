@@ -32,7 +32,7 @@ export default function ClientLoginPage() {
     e.preventDefault();
     setError('');
 
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = code.trim();
     if (!trimmed) {
       setError('Please enter your login code.');
       return;
@@ -91,16 +91,17 @@ export default function ClientLoginPage() {
           <input
             type="text"
             className="code-input"
-            placeholder="e.g. A3K7X2"
+            placeholder="e.g. 1234"
             value={code}
             onChange={(e) => {
-              setCode(e.target.value.toUpperCase());
+              setCode(e.target.value);
               setError('');
             }}
-            maxLength={6}
+            maxLength={4}
             autoFocus
             autoComplete="off"
             spellCheck={false}
+            inputMode="numeric"
           />
           {error && <p className="login-error">{error}</p>}
           <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
