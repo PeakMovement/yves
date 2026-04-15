@@ -8,7 +8,7 @@ import type { Practitioner } from '../types/database';
 export default function PractitionerLoginPage() {
   const navigate = useNavigate();
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [selectedId, setSelectedId] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,6 @@ export default function PractitionerLoginPage() {
       try {
         const list = await getPractitioners();
         setPractitioners(list);
-        if (list.length > 0) setSelectedId(list[0].id);
       } catch (err) {
         setError('Failed to load practitioners');
       } finally {
@@ -32,8 +31,8 @@ export default function PractitionerLoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!selectedId) {
-      setError('Please select a practitioner');
+    if (!code.trim()) {
+      setError('Please enter your practitioner code');
       return;
     }
 
@@ -43,11 +42,11 @@ export default function PractitionerLoginPage() {
     }
 
     setAuthenticating(true);
-    const selected = practitioners.find((p) => p.id === selectedId);
+    const selected = practitioners.find((p) => p.login_code === code);
     setAuthenticating(false);
 
     if (!selected) {
-      setError('Practitioner not found');
+      setError('Invalid practitioner code');
       return;
     }
 
@@ -56,29 +55,12 @@ export default function PractitionerLoginPage() {
       return;
     }
 
-    loginPractitioner(selectedId);
+    loginPractitioner(selected.id);
     navigate('/admin');
   }
 
   if (loading) {
     return <div className="page-loading">Loading...</div>;
-  }
-
-  if (practitioners.length === 0) {
-    return (
-      <div className="client-login">
-        <button className="btn btn-ghost back-link" onClick={() => navigate('/')}>
-          <ArrowLeft size={16} /> Back
-        </button>
-        <div className="login-card">
-          <div className="login-icon">
-            <Lock size={32} />
-          </div>
-          <h2>Practitioner Access</h2>
-          <p>No practitioners found. Please contact support.</p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -95,37 +77,28 @@ export default function PractitionerLoginPage() {
         <p>Log in to access the admin dashboard.</p>
 
         <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="practitioner" className="form-label">
-              Select practitioner:
-            </label>
-            <select
-              id="practitioner"
-              className="form-input"
-              value={selectedId}
-              onChange={(e) => {
-                setSelectedId(e.target.value);
-                setError('');
-              }}
-            >
-              {practitioners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input
+            type="text"
+            className="code-input"
+            placeholder="Practitioner Code"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.toUpperCase());
+              setError('');
+            }}
+            autoFocus
+            autoComplete="off"
+          />
 
           <input
             type="password"
-            className="code-input"
+            className="form-input"
             placeholder="Password"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
               setError('');
             }}
-            autoFocus
             autoComplete="current-password"
           />
           {error && <p className="login-error">{error}</p>}
