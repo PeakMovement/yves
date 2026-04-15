@@ -31,14 +31,15 @@ export default function PractitionerLoginPage() {
     e.preventDefault();
     setError('');
 
-    const codeError = validateLoginCode(loginCode);
+    const trimmedCode = loginCode.trim();
+    const codeError = validateLoginCode(trimmedCode);
     if (codeError) {
       setError(codeError.message);
       return;
     }
 
     setAuthenticating(true);
-    const practitioner = practitioners.find((p) => p.login_code === loginCode);
+    const practitioner = practitioners.find((p) => p.login_code === trimmedCode);
     setAuthenticating(false);
 
     if (!practitioner) {
