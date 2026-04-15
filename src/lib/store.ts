@@ -33,6 +33,32 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
+// ── Response Validation ──────────────────────────────────
+
+/**
+ * Safely handle Supabase errors with fallback to localStorage
+ */
+function handleSupabaseError(error: any, message: string): void {
+  console.error(`${message}:`, error?.message || error);
+}
+
+/**
+ * Validate that required fields exist in a database response
+ */
+function validateClientResponse(data: any): data is Client {
+  return (
+    data &&
+    typeof data === 'object' &&
+    typeof data.id === 'string' &&
+    typeof data.full_name === 'string' &&
+    typeof data.email === 'string' &&
+    typeof data.practitioner_id === 'string' &&
+    typeof data.login_code === 'string' &&
+    typeof data.created_at === 'string'
+  );
+}
+
+
 function isSupabaseConfigured(): boolean {
   // Check if both required Supabase env vars are configured
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -89,7 +115,15 @@ export async function getClient(id: string): Promise<Client | undefined> {
       .select('*')
       .eq('id', id)
       .single();
-    if (!error && data) return data as Client;
+    if (!error && data) {
+      if (validateClientResponse(data)) {
+        return data;
+      } else {
+        handleSupabaseError(null, 'Invalid client response from database');
+      }
+    } else if (error) {
+      handleSupabaseError(error, 'Failed to fetch client from Supabase');
+    }
   }
   return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
 }

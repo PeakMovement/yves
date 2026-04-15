@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import ClientLayout from './components/ClientLayout';
 import AdminLayout from './components/AdminLayout';
 import PortalSelectPage from './pages/PortalSelectPage';
@@ -21,8 +22,9 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
         {/* Portal Selection */}
         <Route path="/" element={<PortalSelectPage />} />
 
@@ -53,8 +55,9 @@ function App() {
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

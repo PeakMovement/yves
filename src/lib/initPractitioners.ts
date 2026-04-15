@@ -4,9 +4,11 @@ interface DefaultPractitioner {
   name: string;
   loginCode: string;
   initialPassword: string;
+  isAdmin?: boolean;
 }
 
 const DEFAULT_PRACTITIONERS: DefaultPractitioner[] = [
+  { name: 'Admin', loginCode: '1313', initialPassword: 'password', isAdmin: true },
   { name: 'Zoe', loginCode: '1001', initialPassword: 'password' },
   { name: 'Justin', loginCode: '1002', initialPassword: 'password' },
   { name: 'Edrich', loginCode: '1003', initialPassword: 'password' },
@@ -19,18 +21,21 @@ export async function initializePractitioners() {
   try {
     const existing = await getPractitioners();
 
-    // Only create if we have fewer than expected practitioners
-    if (existing.length < DEFAULT_PRACTITIONERS.length) {
-      const existingNames = new Set(existing.map((p) => p.name));
+    console.log(`Found ${existing.length} existing practitioners`);
 
-      for (const practitioner of DEFAULT_PRACTITIONERS) {
-        if (!existingNames.has(practitioner.name)) {
+    // Create any missing practitioners
+    for (const practitioner of DEFAULT_PRACTITIONERS) {
+      const exists = existing.some((p) => p.name === practitioner.name);
+      if (!exists) {
+        try {
           await createPractitioner(
             practitioner.name,
             practitioner.initialPassword,
             practitioner.loginCode,
           );
-          console.log(`Created practitioner: ${practitioner.name}`);
+          console.log(`Created practitioner: ${practitioner.name} (code: ${practitioner.loginCode})`);
+        } catch (error) {
+          console.error(`Failed to create practitioner ${practitioner.name}:`, error);
         }
       }
     }
