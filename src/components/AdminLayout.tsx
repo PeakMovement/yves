@@ -1,14 +1,20 @@
 import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, LogOut } from 'lucide-react';
-import { useActivePractitioner, logoutPractitioner } from '../hooks/usePractitioner';
+import { useActivePractitioner, logoutPractitioner, getLoggedInPractitionerId } from '../hooks/usePractitioner';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const practitioner = useActivePractitioner();
+  const sessionId = getLoggedInPractitionerId();
 
-  // If not authenticated as a practitioner, redirect to login
-  if (!practitioner) {
+  // Only redirect if there's no session AND no practitioner loaded
+  if (!sessionId && !practitioner) {
     return <Navigate to="/admin/login" replace />;
+  }
+
+  // Show loading while fetching practitioner data
+  if (sessionId && !practitioner) {
+    return <div className="page-loading">Loading...</div>;
   }
 
   function handleLogout() {
