@@ -92,7 +92,12 @@ export default function PractitionerLoginPage() {
             autoComplete="off"
           />
           {error && <p className="login-error">{error}</p>}
-          <button type="submit" className="btn btn-primary login-btn" disabled={authenticating}>
+          <button
+            type="submit"
+            className="btn btn-primary login-btn"
+            disabled={authenticating}
+            onClick={() => console.log('Button clicked! Authenticating:', authenticating)}
+          >
             {authenticating ? 'Authenticating...' : 'Log in'}
           </button>
         </form>
