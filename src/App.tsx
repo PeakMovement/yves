@@ -1,16 +1,24 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ClientLayout from './components/ClientLayout';
 import AdminLayout from './components/AdminLayout';
 import PortalSelectPage from './pages/PortalSelectPage';
 import ClientLoginPage from './pages/ClientLoginPage';
+import PractitionerLoginPage from './pages/PractitionerLoginPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import CheckInPage from './pages/CheckInPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminClientDetailPage from './pages/AdminClientDetailPage';
+import { initializePractitioners } from './lib/initPractitioners';
 
 function App() {
+  useEffect(() => {
+    initializePractitioners();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -19,6 +27,9 @@ function App() {
 
         {/* Client Login */}
         <Route path="/app/login" element={<ClientLoginPage />} />
+
+        {/* Practitioner Login */}
+        <Route path="/admin/login" element={<PractitionerLoginPage />} />
 
         {/* Client Portal (requires login) */}
         <Route path="/app" element={<ClientLayout />}>
@@ -33,6 +44,7 @@ function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="clients" element={<AdminClientsPage />} />
           <Route path="clients/:clientId" element={<AdminClientDetailPage />} />
+          <Route path="change-password" element={<ChangePasswordPage />} />
         </Route>
 
         {/* Fallback */}

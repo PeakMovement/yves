@@ -1,4 +1,4 @@
-import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit } from '../types/database';
+import type { Client, CheckIn, Symptom, SymptomEntry, DeviceVisit, Practitioner } from '../types/database';
 import { supabase } from './supabase';
 
 // Supabase-backed store with localStorage cache.
@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 // falling back to localStorage if Supabase is not configured.
 
 const STORAGE_KEYS = {
+  practitioners: 'buddy_practitioners',
   clients: 'buddy_clients',
   checkIns: 'buddy_check_ins',
   symptoms: 'buddy_symptoms',
@@ -665,6 +666,141 @@ export function calculateComplianceRating(client: Client, checkIns: CheckIn[]): 
       recency: { score: recScore, label: 'Recency', detail: recDetail },
     },
   };
+}
+
+// ── Practitioners ───────────────────────────────────────────
+
+export async function getPractitioners(): Promise<Practitioner[]> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      writeLocal(STORAGE_KEYS.practitioners, data);
+      return data as Practitioner[];
+    }
+  }
+  return readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+}
+
+export async function getPractitioner(id: string): Promise<Practitioner | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!error && data) return data as Practitioner;
+  }
+  return readLocal<Practitioner>(STORAGE_KEYS.practitioners).find((p) => p.id === id);
+}
+
+export async function getPractitionerByLoginCode(code: string): Promise<Practitioner | undefined> {
+  const upper = code.toUpperCase();
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select('*')
+      .eq('login_code', upper)
+      .single();
+    if (!error && data) return data as Practitioner;
+  }
+  return readLocal<Practitioner>(STORAGE_KEYS.practitioners).find(
+    (p) => p.login_code === upper,
+  );
+}
+
+// Simple password hash for client-side use (NOT production-grade)
+function hashPassword(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
+
+export async function createPractitioner(
+  name: string,
+  initialPassword: string,
+  customLoginCode?: string,
+): Promise<Practitioner> {
+  const loginCode = customLoginCode || (await generateUniqueLoginCode());
+  const passwordHash = hashPassword(initialPassword);
+
+  const practitioner: Practitioner = {
+    id: uuid(),
+    name,
+    login_code: loginCode,
+    password_hash: passwordHash,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  if (isSupabaseConfigured()) {
+    const { data: inserted, error } = await supabase
+      .from('practitioners')
+      .insert(practitioner)
+      .select()
+      .single();
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      throw new Error(`Failed to create practitioner: ${error.message}`);
+    }
+    const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+    local.push(inserted as Practitioner);
+    writeLocal(STORAGE_KEYS.practitioners, local);
+    return inserted as Practitioner;
+  }
+
+  const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+  practitioners.push(practitioner);
+  writeLocal(STORAGE_KEYS.practitioners, practitioners);
+  return practitioner;
+}
+
+export async function updatePractitionerPassword(id: string, newPassword: string): Promise<Practitioner | undefined> {
+  const passwordHash = hashPassword(newPassword);
+  const updated_at = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    const { data: updated, error } = await supabase
+      .from('practitioners')
+      .update({ password_hash: passwordHash, updated_at })
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && updated) {
+      const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+      const idx = local.findIndex((p) => p.id === id);
+      if (idx !== -1) {
+        local[idx] = updated as Practitioner;
+        writeLocal(STORAGE_KEYS.practitioners, local);
+      }
+      return updated as Practitioner;
+    }
+  }
+
+  const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+  const idx = practitioners.findIndex((p) => p.id === id);
+  if (idx === -1) return undefined;
+  practitioners[idx] = {
+    ...practitioners[idx],
+    password_hash: passwordHash,
+    updated_at,
+  };
+  writeLocal(STORAGE_KEYS.practitioners, practitioners);
+  return practitioners[idx];
+}
+
+export function validatePractitionerPassword(practitioner: Practitioner, password: string): boolean {
+  return verifyPassword(password, practitioner.password_hash);
 }
 
 // ── Seed data (no-op in production) ──────────────────────

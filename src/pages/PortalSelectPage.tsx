@@ -21,7 +21,7 @@ export default function PortalSelectPage() {
           <p>Daily check-ins, view your timeline, and track your progress between appointments.</p>
         </button>
 
-        <button className="portal-card" onClick={() => navigate('/admin')}>
+        <button className="portal-card" onClick={() => navigate('/admin/login')}>
           <div className="portal-icon admin-icon">
             <Stethoscope size={32} />
           </div>

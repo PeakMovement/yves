@@ -1,64 +1,19 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, Lock } from 'lucide-react';
-
-const ADMIN_CODE = '1313';
-const ADMIN_SESSION_KEY = 'buddy_admin_authed';
-
-function AdminGate({ onUnlock }: { onUnlock: () => void }) {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    if (code.trim() === ADMIN_CODE) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      onUnlock();
-    } else {
-      setError('Incorrect access code.');
-    }
-  }
-
-  return (
-    <div className="client-login">
-      <button className="btn btn-ghost back-link" onClick={() => navigate('/')}>
-        &larr; Back
-      </button>
-      <div className="login-card">
-        <div className="login-icon">
-          <Lock size={32} />
-        </div>
-        <h2>Practitioner Access</h2>
-        <p>Enter your access code to continue.</p>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="password"
-            className="code-input"
-            placeholder="Access code"
-            value={code}
-            onChange={(e) => { setCode(e.target.value); setError(''); }}
-            autoFocus
-            autoComplete="off"
-          />
-          {error && <p className="login-error">{error}</p>}
-          <button type="submit" className="btn btn-primary login-btn">
-            Unlock
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
+import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users, LogOut, KeyRound } from 'lucide-react';
+import { useActivePractitioner, logoutPractitioner } from '../hooks/usePractitioner';
 
 export default function AdminLayout() {
-  const [authed, setAuthed] = useState(
-    () => sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true'
-  );
+  const navigate = useNavigate();
+  const practitioner = useActivePractitioner();
 
-  if (!authed) {
-    return <AdminGate onUnlock={() => setAuthed(true)} />;
+  // If not authenticated as a practitioner, redirect to login
+  if (!practitioner) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  function handleLogout() {
+    logoutPractitioner();
+    navigate('/');
   }
 
   return (
@@ -84,10 +39,14 @@ export default function AdminLayout() {
         </nav>
 
         <div className="sidebar-footer">
-          <NavLink to="/" className="sidebar-link" onClick={() => sessionStorage.removeItem(ADMIN_SESSION_KEY)}>
-            <LogOut size={18} />
-            <span>Switch Portal</span>
+          <NavLink to="/admin/change-password" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <KeyRound size={18} />
+            <span>Change Password</span>
           </NavLink>
+          <button className="sidebar-link" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 

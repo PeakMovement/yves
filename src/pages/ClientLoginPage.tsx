@@ -1,14 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClientByLoginCode, trackDeviceVisit } from '../lib/store';
+import { getClientByLoginCode, trackDeviceVisit, getPractitioners } from '../lib/store';
 import { loginClient } from '../hooks/useClient';
 import { KeyRound, ArrowLeft } from 'lucide-react';
+import type { Practitioner } from '../types/database';
 
 export default function ClientLoginPage() {
   const navigate = useNavigate();
+  const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
+  const [selectedPractitioner, setSelectedPractitioner] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingPractitioners, setLoadingPractitioners] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await getPractitioners();
+        setPractitioners(list);
+        if (list.length > 0) setSelectedPractitioner(list[0].id);
+      } catch (err) {
+        console.error('Failed to load practitioners:', err);
+      } finally {
+        setLoadingPractitioners(false);
+      }
+    })();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +66,28 @@ export default function ClientLoginPage() {
         <p>Enter the login code your practitioner gave you to access your check-in portal.</p>
 
         <form onSubmit={handleSubmit}>
+          {!loadingPractitioners && practitioners.length > 0 && (
+            <div>
+              <label htmlFor="practitioner" className="form-label">
+                Select your practitioner:
+              </label>
+              <select
+                id="practitioner"
+                className="form-input"
+                value={selectedPractitioner}
+                onChange={(e) => {
+                  setSelectedPractitioner(e.target.value);
+                  setError('');
+                }}
+              >
+                {practitioners.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <input
             type="text"
             className="code-input"
