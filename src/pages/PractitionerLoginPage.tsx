@@ -18,8 +18,10 @@ export default function PractitionerLoginPage() {
     (async () => {
       try {
         const list = await getPractitioners();
+        console.log('Loaded practitioners:', list);
         setPractitioners(list);
       } catch (err) {
+        console.error('Error loading practitioners:', err);
         setError('Failed to load practitioners');
       } finally {
         setLoading(false);
@@ -32,6 +34,9 @@ export default function PractitionerLoginPage() {
     setError('');
 
     const trimmedCode = loginCode.trim();
+    console.log('Login attempt with code:', trimmedCode);
+    console.log('Available practitioners:', practitioners);
+
     const codeError = validateLoginCode(trimmedCode);
     if (codeError) {
       setError(codeError.message);
@@ -40,6 +45,7 @@ export default function PractitionerLoginPage() {
 
     setAuthenticating(true);
     const practitioner = practitioners.find((p) => p.login_code === trimmedCode);
+    console.log('Matched practitioner:', practitioner);
     setAuthenticating(false);
 
     if (!practitioner) {
@@ -47,7 +53,9 @@ export default function PractitionerLoginPage() {
       return;
     }
 
+    console.log('Logging in practitioner:', practitioner.id);
     loginPractitioner(practitioner.id);
+    console.log('Navigating to /admin');
     navigate('/admin');
   }
 
