@@ -2,9 +2,7 @@ export interface Practitioner {
   id: string;
   name: string;
   login_code: string;
-  password_hash: string;
   created_at: string;
-  updated_at: string;
 }
 
 export interface Client {

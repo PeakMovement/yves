@@ -7,7 +7,6 @@ import PortalSelectPage from './pages/PortalSelectPage';
 import ClientLoginPage from './pages/ClientLoginPage';
 import ClientRegistrationPage from './pages/ClientRegistrationPage';
 import PractitionerLoginPage from './pages/PractitionerLoginPage';
-import ChangePasswordPage from './pages/ChangePasswordPage';
 import CheckInPage from './pages/CheckInPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
@@ -50,7 +49,6 @@ function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="clients" element={<AdminClientsPage />} />
           <Route path="clients/:clientId" element={<AdminClientDetailPage />} />
-          <Route path="change-password" element={<ChangePasswordPage />} />
         </Route>
 
         {/* Fallback */}

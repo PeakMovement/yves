@@ -82,22 +82,6 @@ export function validateLoginCode(code: string): ValidationError | null {
   return null;
 }
 
-export function validatePassword(password: string): ValidationError | null {
-  if (!password) {
-    return { field: 'password', message: 'Password is required' };
-  }
-
-  if (password.length < 6) {
-    return { field: 'password', message: 'Password must be at least 6 characters' };
-  }
-
-  if (password.length > 128) {
-    return { field: 'password', message: 'Password must not exceed 128 characters' };
-  }
-
-  return null;
-}
-
 export function validateCheckInData(data: {
   pain_level?: number;
   sleep_quality?: number;

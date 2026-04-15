@@ -1,5 +1,5 @@
 import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, KeyRound } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut } from 'lucide-react';
 import { useActivePractitioner, logoutPractitioner } from '../hooks/usePractitioner';
 
 export default function AdminLayout() {
@@ -39,10 +39,6 @@ export default function AdminLayout() {
         </nav>
 
         <div className="sidebar-footer">
-          <NavLink to="/admin/change-password" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <KeyRound size={18} />
-            <span>Change Password</span>
-          </NavLink>
           <button className="sidebar-link" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
             <LogOut size={18} />
             <span>Logout</span>

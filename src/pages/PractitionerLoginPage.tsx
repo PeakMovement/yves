@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
-import { getPractitioners, validatePractitionerPassword } from '../lib/store';
+import { getPractitioners } from '../lib/store';
 import { loginPractitioner } from '../hooks/usePractitioner';
+import { validateLoginCode } from '../lib/validation';
 import type { Practitioner } from '../types/database';
 
 export default function PractitionerLoginPage() {
   const navigate = useNavigate();
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [selectedId, setSelectedId] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedName, setSelectedName] = useState('');
+  const [loginCode, setLoginCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [authenticating, setAuthenticating] = useState(false);
@@ -19,7 +20,7 @@ export default function PractitionerLoginPage() {
       try {
         const list = await getPractitioners();
         setPractitioners(list);
-        if (list.length > 0) setSelectedId(list[0].id);
+        if (list.length > 0) setSelectedName(list[0].name);
       } catch (err) {
         setError('Failed to load practitioners');
       } finally {
@@ -32,18 +33,19 @@ export default function PractitionerLoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!selectedId) {
-      setError('Please select a practitioner');
+    if (!selectedName) {
+      setError('Please select your name');
       return;
     }
 
-    if (!password.trim()) {
-      setError('Please enter your password');
+    const codeError = validateLoginCode(loginCode);
+    if (codeError) {
+      setError(codeError.message);
       return;
     }
 
     setAuthenticating(true);
-    const selected = practitioners.find((p) => p.id === selectedId);
+    const selected = practitioners.find((p) => p.name === selectedName);
     setAuthenticating(false);
 
     if (!selected) {
@@ -51,12 +53,12 @@ export default function PractitionerLoginPage() {
       return;
     }
 
-    if (!validatePractitionerPassword(selected, password)) {
-      setError('Incorrect password');
+    if (selected.login_code !== loginCode) {
+      setError('Incorrect login code');
       return;
     }
 
-    loginPractitioner(selectedId);
+    loginPractitioner(selected.id);
     navigate('/admin');
   }
 
@@ -97,19 +99,19 @@ export default function PractitionerLoginPage() {
         <form onSubmit={handleSubmit}>
           <div>
             <label htmlFor="practitioner" className="form-label">
-              Select practitioner:
+              Select your name:
             </label>
             <select
               id="practitioner"
               className="form-input"
-              value={selectedId}
+              value={selectedName}
               onChange={(e) => {
-                setSelectedId(e.target.value);
+                setSelectedName(e.target.value);
                 setError('');
               }}
             >
               {practitioners.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.name}>
                   {p.name}
                 </option>
               ))}
@@ -117,16 +119,18 @@ export default function PractitionerLoginPage() {
           </div>
 
           <input
-            type="password"
+            type="text"
             className="code-input"
-            placeholder="Password"
-            value={password}
+            placeholder="ENTER 4-DIGIT CODE"
+            value={loginCode}
             onChange={(e) => {
-              setPassword(e.target.value);
+              setLoginCode(e.target.value);
               setError('');
             }}
             autoFocus
-            autoComplete="current-password"
+            inputMode="numeric"
+            maxLength={4}
+            autoComplete="off"
           />
           {error && <p className="login-error">{error}</p>}
           <button type="submit" className="btn btn-primary login-btn" disabled={authenticating}>

@@ -754,36 +754,18 @@ export async function getPractitionerByLoginCode(code: string): Promise<Practiti
   );
 }
 
-// Simple password hash for client-side use (NOT production-grade)
-function hashPassword(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash).toString(36);
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
-}
 
 export async function createPractitioner(
   name: string,
-  initialPassword: string,
   customLoginCode?: string,
 ): Promise<Practitioner> {
   const loginCode = customLoginCode || (await generateUniqueLoginCode());
-  const passwordHash = hashPassword(initialPassword);
 
   const practitioner: Practitioner = {
     id: uuid(),
     name,
     login_code: loginCode,
-    password_hash: passwordHash,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   };
 
   if (isSupabaseConfigured()) {
@@ -808,43 +790,6 @@ export async function createPractitioner(
   return practitioner;
 }
 
-export async function updatePractitionerPassword(id: string, newPassword: string): Promise<Practitioner | undefined> {
-  const passwordHash = hashPassword(newPassword);
-  const updated_at = new Date().toISOString();
-
-  if (isSupabaseConfigured()) {
-    const { data: updated, error } = await supabase
-      .from('practitioners')
-      .update({ password_hash: passwordHash, updated_at })
-      .eq('id', id)
-      .select()
-      .single();
-    if (!error && updated) {
-      const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
-      const idx = local.findIndex((p) => p.id === id);
-      if (idx !== -1) {
-        local[idx] = updated as Practitioner;
-        writeLocal(STORAGE_KEYS.practitioners, local);
-      }
-      return updated as Practitioner;
-    }
-  }
-
-  const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
-  const idx = practitioners.findIndex((p) => p.id === id);
-  if (idx === -1) return undefined;
-  practitioners[idx] = {
-    ...practitioners[idx],
-    password_hash: passwordHash,
-    updated_at,
-  };
-  writeLocal(STORAGE_KEYS.practitioners, practitioners);
-  return practitioners[idx];
-}
-
-export function validatePractitionerPassword(practitioner: Practitioner, password: string): boolean {
-  return verifyPassword(password, practitioner.password_hash);
-}
 
 // ── Seed data (no-op in production) ──────────────────────
 
