@@ -75,9 +75,8 @@ export default function ClientLoginPage() {
           </p>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-primary login-btn"
             onClick={() => navigate('/app/register')}
-            style={{ width: '100%' }}
           >
             Create an account
           </button>
