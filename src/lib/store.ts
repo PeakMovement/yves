@@ -807,18 +807,6 @@ export interface SymptomAnalysisResult {
   matched_guidelines?: string[];
 }
 
-export async function getClient(id: string): Promise<Client | undefined> {
-  if (isSupabaseConfigured()) {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (!error && data) return data as Client;
-  }
-  return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
-}
-
 export async function createContactRequest(
   clientId: string,
   practitionerId: string,
