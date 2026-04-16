@@ -82,11 +82,16 @@ export default function QueryPage() {
                   <AlertCircle size={24} style={{ color: '#c2410c', flexShrink: 0, marginTop: '2px' }} />
                   <div>
                     <h3 style={{ color: '#c2410c', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
-                      Attention Needed
+                      ⚠️ Medical Referral Recommended
                     </h3>
-                    <p style={{ color: '#92400e', fontSize: '14px', lineHeight: '1.5' }}>
-                      Based on your description, we recommend you {result.suggested_next_step.toLowerCase()}.
+                    <p style={{ color: '#92400e', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
+                      {result.suggested_next_step}
                     </p>
+                    {result.matched_symptom && (
+                      <p style={{ color: '#92400e', fontSize: '12px' }}>
+                        <strong>Matched:</strong> {result.matched_symptom} (Score: {result.matched_score}/10)
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
@@ -103,11 +108,16 @@ export default function QueryPage() {
                 }}>
                   <div>
                     <h3 style={{ color: '#166534', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
-                      All Good
+                      ✓ Monitoring Recommended
                     </h3>
-                    <p style={{ color: '#166534', fontSize: '14px', lineHeight: '1.5' }}>
+                    <p style={{ color: '#166534', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
                       {result.suggested_next_step}
                     </p>
+                    {result.matched_symptom && (
+                      <p style={{ color: '#166534', fontSize: '12px' }}>
+                        <strong>Matched:</strong> {result.matched_symptom} (Score: {result.matched_score}/10)
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
