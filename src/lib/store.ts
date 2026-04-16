@@ -935,6 +935,18 @@ export async function createContactRequest(
   }
 
   try {
+    // Verify the client exists in the database first
+    const existingClient = await getClient(clientId);
+    if (!existingClient) {
+      throw new Error('Your profile was not found in the system. Please log in again.');
+    }
+
+    // Verify the practitioner exists
+    const existingPractitioner = await getPractitioner(practitionerId);
+    if (!existingPractitioner) {
+      throw new Error('Your assigned professional was not found. Please contact support.');
+    }
+
     const { error } = await supabase.from('contact_requests').insert({
       id: uuid(),
       client_id: clientId,
