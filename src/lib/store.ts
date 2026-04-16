@@ -244,6 +244,135 @@ export async function toggleSymptomActive(id: string): Promise<void> {
   }
 }
 
+// ── Red Flag Detection ──────────────────────────────────
+
+function analyzeNotesForRedFlags(notes: string, painLevel: number, symptomChange: string): boolean {
+  if (!notes || notes.trim().length === 0) return false;
+
+  const text = notes.toLowerCase();
+
+  // Hard override phrases — any match = immediate refer (score 10)
+  const hardOverrides = [
+    'broken', 'fracture', 'fractured', 'snapped bone', 'bone sticking out', 'compound fracture',
+    'dislocated', 'dislocation', 'popped out', 'can\'t bear weight', 'cannot bear weight',
+    'heard a crack', 'heard a snap', 'heard a pop', 'felt something snap', 'felt something crack',
+    'deformity', 'visibly deformed', 'bone exposed', 'stroke', 'face drooping', 'slurred speech',
+    'can\'t speak', 'cannot speak', 'sudden vision loss', 'loss of consciousness', 'unconscious',
+    'blacked out', 'passed out', 'fainted', 'seizure', 'convulsion', 'loss of bladder',
+    'loss of bowel', 'saddle numbness', 'groin numbness', 'cauda equina', 'heart attack',
+    'chest pain', 'chest pressure', 'chest tightness', 'crushing chest', 'tight chest',
+    'can\'t breathe', 'cannot breathe', 'struggling to breathe', 'difficulty breathing',
+    'worst headache of my life', 'worst headache ever', 'thunderclap headache',
+    'head injury', 'hit my head', 'concussion'
+  ];
+
+  for (const phrase of hardOverrides) {
+    if (text.includes(phrase)) return true;
+  }
+
+  // Keyword groups scoring
+  let score = 0;
+  const matchedGroups = new Set<string>();
+
+  const keywordGroups: Record<string, { keywords: string[]; score: number }> = {
+    'neuro_tingling': {
+      keywords: ['pins and needles', 'tingling', 'tingly', 'prickling', 'crawling sensation', 'electric feeling', 'electric shock'],
+      score: 6
+    },
+    'neuro_numbness': {
+      keywords: ['numbness', 'numb', 'gone numb', 'no feeling', 'can\'t feel', 'lost feeling', 'loss of sensation'],
+      score: 7
+    },
+    'neuro_weakness': {
+      keywords: ['weakness', 'weak', 'muscle weakness', 'progressive weakness', 'getting weaker', 'dropping things', 'loss of grip', 'foot drop'],
+      score: 7
+    },
+    'radiating_pain': {
+      keywords: ['radiating', 'shooting pain', 'burning pain', 'nerve pain', 'down my arm', 'down my leg', 'into my fingers', 'sciatica'],
+      score: 7
+    },
+    'trauma': {
+      keywords: ['fell', 'fallen', 'hit', 'impact', 'crash', 'collision', 'tackled', 'twisted', 'rolled', 'wrenched', 'hyperextended'],
+      score: 5
+    },
+    'fever': {
+      keywords: ['fever', 'high temperature', 'chills', 'rigors'],
+      score: 6
+    },
+    'night_pain': {
+      keywords: ['wakes me up', 'night pain', 'worse at night', 'can\'t sleep from pain'],
+      score: 7
+    },
+    'pain_at_rest': {
+      keywords: ['pain at rest', 'constant pain', 'doesn\'t go away', 'no relief', 'unrelenting'],
+      score: 6
+    },
+    'hot_red_joint': {
+      keywords: ['hot joint', 'red joint', 'swollen and red', 'hot and swollen'],
+      score: 7
+    },
+    'neck_locked': {
+      keywords: ['can\'t turn my head', 'neck locked', 'unable to move neck'],
+      score: 7
+    },
+    'function_loss': {
+      keywords: ['can\'t walk', 'cannot walk', 'can\'t move', 'can\'t lift', 'completely locked up'],
+      score: 6
+    }
+  };
+
+  for (const [group, { keywords, score: groupScore }] of Object.entries(keywordGroups)) {
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        matchedGroups.add(group);
+        score += groupScore;
+        break; // One match per group
+      }
+    }
+  }
+
+  // Amplifiers — add bonus if present
+  const amplifiers: Record<string, { keywords: string[]; bonus: number }> = {
+    'severity': {
+      keywords: ['severe', 'severely', 'extreme', 'excruciating', 'unbearable', 'worst', '10/10'],
+      bonus: 2
+    },
+    'sudden': {
+      keywords: ['sudden', 'suddenly', 'instantly', 'all of a sudden', 'out of nowhere', 'acute'],
+      bonus: 2
+    },
+    'progression': {
+      keywords: ['worsening', 'getting worse', 'progressively worse', 'spreading', 'not improving'],
+      bonus: 1
+    },
+    'bilateral': {
+      keywords: ['both sides', 'bilateral', 'both arms', 'both legs'],
+      bonus: 2
+    }
+  };
+
+  for (const { keywords, bonus } of Object.values(amplifiers)) {
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        score += bonus;
+        break; // One per amplifier group
+      }
+    }
+  }
+
+  // Cluster bonus — 3+ matched keyword groups
+  if (matchedGroups.size >= 3) score += 1;
+
+  // Cap score
+  score = Math.min(score, 10);
+
+  // Numeric thresholds also contribute
+  if (painLevel >= 8) score = Math.max(score, 8);
+  if (symptomChange === 'much_worse') score = Math.max(score, 8);
+
+  return score >= 6;
+}
+
 // ── Check-ins ────────────────────────────────────────────
 
 export async function getCheckIns(clientId: string): Promise<CheckIn[]> {
@@ -279,10 +408,7 @@ export async function hasCheckedInToday(clientId: string): Promise<boolean> {
 }
 
 export async function createCheckIn(data: Omit<CheckIn, 'id' | 'created_at' | 'flagged'>): Promise<CheckIn> {
-  const flagged =
-    data.pain_level >= 8 ||
-    data.symptom_change === 'much_worse' ||
-    data.overall_feeling <= 1;
+  const flagged = analyzeNotesForRedFlags(data.notes, data.pain_level, data.symptom_change);
   const checkIn: CheckIn = {
     ...data,
     id: uuid(),
