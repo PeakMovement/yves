@@ -6,7 +6,6 @@ const SESSION_KEY = 'buddy_active_practitioner_id';
 
 export function useActivePractitioner() {
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadPractitioner() {
@@ -19,7 +18,6 @@ export function useActivePractitioner() {
           setPractitioner(null);
         }
       }
-      setLoading(false);
     }
 
     loadPractitioner();

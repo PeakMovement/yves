@@ -444,7 +444,6 @@ interface MatchResult {
 
 export function analyzeSymptomLocal(symptomPrompt: string): SymptomAnalysisResult {
   const normalizedPrompt = symptomPrompt.toLowerCase();
-  const promptPhrases = extractKeyPhrases(normalizedPrompt);
   const promptWords = normalizedPrompt.split(/\s+/).filter(w => w.length > 0);
 
   let bestMatch: MatchResult | null = null;
