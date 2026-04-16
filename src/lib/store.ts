@@ -930,6 +930,10 @@ export async function createContactRequest(
   symptomDescription: string,
   symptomScore: number,
 ): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Database not configured');
+  }
+
   try {
     const { error } = await supabase.from('contact_requests').insert({
       id: uuid(),
