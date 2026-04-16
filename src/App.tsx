@@ -8,6 +8,7 @@ import ClientLoginPage from './pages/ClientLoginPage';
 import ClientRegistrationPage from './pages/ClientRegistrationPage';
 import PractitionerLoginPage from './pages/PractitionerLoginPage';
 import CheckInPage from './pages/CheckInPage';
+import QueryPage from './pages/QueryPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
 import QueryPage from './pages/QueryPage';
@@ -41,6 +42,7 @@ function App() {
         <Route path="/app" element={<ClientLayout />}>
           <Route index element={<Navigate to="/app/checkin" replace />} />
           <Route path="checkin" element={<CheckInPage />} />
+          <Route path="query" element={<QueryPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="progress" element={<ClientProgressPage />} />
           <Route path="query" element={<QueryPage />} />

@@ -791,6 +791,53 @@ export async function createPractitioner(
 }
 
 
+// ── Contact requests (symptom red flag notifications) ──────
+
+export async function createContactRequest(
+  clientId: string,
+  practitionerId: string,
+  symptomDescription: string,
+  symptomScore: number,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('contact_requests').insert({
+        id: uuid(),
+        client_id: clientId,
+        practitioner_id: practitionerId,
+        symptom_description: symptomDescription,
+        symptom_score: symptomScore,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error creating contact request:', err);
+    }
+  }
+}
+
+export async function storeSymptomQuery(
+  clientId: string,
+  symptomDescription: string,
+  redFlagDetected: boolean,
+  confidenceScore: number,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('symptom_queries').insert({
+        id: uuid(),
+        client_id: clientId,
+        symptom_description: symptomDescription,
+        red_flag_detected: redFlagDetected,
+        confidence_score: confidenceScore,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error storing symptom query:', err);
+    }
+  }
+}
+
 // ── Seed data (no-op in production) ──────────────────────
 
 export async function seedDefaultClients() {

@@ -30,9 +30,14 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     (async () => {
-      const clients = await getClients();
+      const practitionerId = getLoggedInPractitionerId();
+      const allClients = await getClients();
+
+      // Filter clients to only those assigned to this practitioner
+      const myClients = allClients.filter(c => c.practitioner_id === practitionerId);
+
       const result: ClientRow[] = [];
-      for (const client of clients) {
+      for (const client of myClients) {
         const checkIns = await getCheckIns(client.id);
         const done = await hasCheckedInToday(client.id);
         result.push({ client, checkIns, done });
@@ -50,7 +55,7 @@ export default function AdminDashboardPage() {
 
   if (loading) return <div className="page-loading">Loading...</div>;
 
-  const practitionerId = getLoggedInPractitionerId();
+  const practitionerId = getLoggedInPractitionerId() || '';
 
   return (
     <div className="admin-dashboard">

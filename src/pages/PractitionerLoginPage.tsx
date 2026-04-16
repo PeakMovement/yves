@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
-import { getPractitioners } from '../lib/store';
+import { getPractitioners, validatePractitionerPassword } from '../lib/store';
 import { loginPractitioner } from '../hooks/usePractitioner';
-import { validateLoginCode } from '../lib/validation';
 import type { Practitioner } from '../types/database';
 
 export default function PractitionerLoginPage() {
   const navigate = useNavigate();
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [loginCode, setLoginCode] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [authenticating, setAuthenticating] = useState(false);
@@ -18,10 +18,8 @@ export default function PractitionerLoginPage() {
     (async () => {
       try {
         const list = await getPractitioners();
-        console.log('Loaded practitioners:', list);
         setPractitioners(list);
       } catch (err) {
-        console.error('Error loading practitioners:', err);
         setError('Failed to load practitioners');
       } finally {
         setLoading(false);
@@ -33,29 +31,31 @@ export default function PractitionerLoginPage() {
     e.preventDefault();
     setError('');
 
-    const trimmedCode = loginCode.trim();
-    console.log('Login attempt with code:', trimmedCode);
-    console.log('Available practitioners:', practitioners);
+    if (!code.trim()) {
+      setError('Please enter your practitioner code');
+      return;
+    }
 
-    const codeError = validateLoginCode(trimmedCode);
-    if (codeError) {
-      setError(codeError.message);
+    if (!password.trim()) {
+      setError('Please enter your password');
       return;
     }
 
     setAuthenticating(true);
-    const practitioner = practitioners.find((p) => p.login_code === trimmedCode);
-    console.log('Matched practitioner:', practitioner);
+    const selected = practitioners.find((p) => p.login_code === code);
     setAuthenticating(false);
 
-    if (!practitioner) {
-      setError('Incorrect login code');
+    if (!selected) {
+      setError('Invalid practitioner code');
       return;
     }
 
-    console.log('Logging in practitioner:', practitioner.id);
-    loginPractitioner(practitioner.id);
-    console.log('Navigating to /admin');
+    if (!validatePractitionerPassword(selected, password)) {
+      setError('Incorrect password');
+      return;
+    }
+
+    loginPractitioner(selected.id);
     navigate('/admin');
   }
 
@@ -80,24 +80,29 @@ export default function PractitionerLoginPage() {
           <input
             type="text"
             className="code-input"
-            placeholder="ENTER YOUR 4-DIGIT CODE"
-            value={loginCode}
+            placeholder="Practitioner Code"
+            value={code}
             onChange={(e) => {
-              setLoginCode(e.target.value);
+              setCode(e.target.value.toUpperCase());
               setError('');
             }}
             autoFocus
-            inputMode="numeric"
-            maxLength={4}
             autoComplete="off"
           />
+
+          <input
+            type="password"
+            className="form-input"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError('');
+            }}
+            autoComplete="current-password"
+          />
           {error && <p className="login-error">{error}</p>}
-          <button
-            type="submit"
-            className="btn btn-primary login-btn"
-            disabled={authenticating}
-            onClick={() => console.log('Button clicked! Authenticating:', authenticating)}
-          >
+          <button type="submit" className="btn btn-primary login-btn" disabled={authenticating}>
             {authenticating ? 'Authenticating...' : 'Log in'}
           </button>
         </form>
