@@ -45,19 +45,39 @@ export default function QueryPage() {
   }, [clientId]);
 
   async function handleContactProfessional() {
-    if (!client?.practitioner_id) {
-      setError('Unable to identify your assigned professional');
+    console.log('Contact professional clicked', { client, clientId });
+
+    if (!clientId) {
+      setError('Unable to identify you. Please refresh and try again.');
+      return;
+    }
+
+    if (!client) {
+      setError('Loading your profile... please try again in a moment.');
+      return;
+    }
+
+    if (!client.practitioner_id) {
+      setError('No assigned professional found in your profile');
       return;
     }
 
     setContacting(true);
+    setError('');
     try {
+      console.log('Sending contact request', {
+        clientId,
+        practitionerId: client.practitioner_id,
+        symptom: prompt,
+        score: result.matched_score,
+      });
       await createContactRequest(
-        clientId!,
+        clientId,
         client.practitioner_id,
         prompt,
         result.matched_score || 0
       );
+      console.log('Contact request sent successfully');
       setContacted(true);
     } catch (err) {
       console.error('Error contacting professional:', err);
@@ -182,7 +202,8 @@ export default function QueryPage() {
                   className="btn btn-primary"
                   style={{ flex: 1, backgroundColor: '#c2410c' }}
                   onClick={handleContactProfessional}
-                  disabled={contacting}
+                  disabled={contacting || !client}
+                  title={!client ? 'Loading professional info...' : ''}
                 >
                   <Send size={16} />
                   {contacting ? 'Sending...' : 'Contact My Professional'}
@@ -202,6 +223,18 @@ export default function QueryPage() {
                   ✓ Notification sent to your professional
                 </div>
               )}
+              {error && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fff7ed',
+                  border: '1px solid #fed7aa',
+                  borderRadius: 'var(--radius-sm)',
+                  color: '#c2410c',
+                  fontSize: '13px'
+                }}>
+                  {error}
+                </div>
+              )}
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
@@ -209,6 +242,7 @@ export default function QueryPage() {
                   setResult(null);
                   setPrompt('');
                   setContacted(false);
+                  setError('');
                 }}
               >
                 Ask Another Question
