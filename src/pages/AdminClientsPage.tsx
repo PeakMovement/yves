@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient, getPractitioners } from '../lib/store';
+import { getLoggedInPractitionerId } from '../hooks/usePractitioner';
 import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
 import type { Client, CheckIn, Practitioner } from '../types/database';
 import { formatDate } from '../lib/utils';
@@ -36,9 +37,14 @@ export default function AdminClientsPage() {
   });
 
   async function loadClients() {
-    const clients = await getClients();
+    const practitionerId = getLoggedInPractitionerId();
+    const allClients = await getClients();
+
+    // Filter clients to only those assigned to this practitioner
+    const myClients = allClients.filter(c => c.practitioner_id === practitionerId);
+
     const result: ClientRow[] = [];
-    for (const client of clients) {
+    for (const client of myClients) {
       const checkIns = await getCheckIns(client.id);
       const done = await hasCheckedInToday(client.id);
       result.push({ client, checkIns, done });
