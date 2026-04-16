@@ -818,6 +818,8 @@ export async function getClient(id: string): Promise<Client | undefined> {
   }
   return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
 }
+
+export async function createContactRequest(
   clientId: string,
   practitionerId: string,
   symptomDescription: string,
@@ -844,6 +846,8 @@ export async function getClient(id: string): Promise<Client | undefined> {
     throw error;
   }
 }
+
+export async function storeSymptomQuery(
   clientId: string,
   queryText: string,
   redFlagDetected: boolean,
