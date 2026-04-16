@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getPractitioners, updateClient } from '../lib/store';
 import type { Client, Practitioner } from '../types/database';
-import { User, AlertCircle } from 'lucide-react';
+import { User, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface ProfessionalSelectorProps {
   client: Client;
@@ -15,6 +15,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -31,11 +32,14 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
     })();
   }, []);
 
-  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const newId = e.target.value;
-    if (!newId) return;
+  async function handleSelect(newId: string) {
+    if (!newId || newId === selectedId) {
+      setDropdownOpen(false);
+      return;
+    }
 
     setSelectedId(newId);
+    setDropdownOpen(false);
     setUpdating(true);
     setError('');
     setSuccess(false);
@@ -105,8 +109,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
       border: `1px solid ${isUnassigned ? '#fecaca' : 'var(--border)'}`,
       borderRadius: 'var(--radius-sm)',
       marginBottom: '16px',
-      position: 'relative',
-      zIndex: 10
+      position: 'relative'
     }}>
       <div style={{
         display: 'flex',
@@ -125,32 +128,84 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         </label>
       </div>
 
-      <select
-        value={selectedId}
-        onChange={handleChange}
-        disabled={updating}
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          fontSize: '14px',
-          border: `1px solid ${isUnassigned ? '#fca5a5' : 'var(--border)'}`,
-          borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'var(--bg)',
-          color: 'var(--text)',
-          cursor: updating ? 'wait' : 'pointer',
-          opacity: updating ? 0.6 : 1,
-          transition: 'all 200ms',
-          appearance: 'auto',
-          boxSizing: 'border-box'
-        }}
-      >
-        <option value="">Select a professional</option>
-        {practitioners.map(p => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      <div style={{ position: 'relative', zIndex: 100 }}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          disabled={updating}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            fontSize: '14px',
+            border: `1px solid ${isUnassigned ? '#fca5a5' : 'var(--border)'}`,
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--bg)',
+            color: 'var(--text)',
+            cursor: updating ? 'wait' : 'pointer',
+            opacity: updating ? 0.6 : 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            transition: 'all 200ms'
+          }}
+        >
+          <span>{currentProfessional?.name || 'Select a professional'}</span>
+          <ChevronDown size={16} style={{
+            transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 200ms'
+          }} />
+        </button>
+
+        {dropdownOpen && !updating && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: '4px',
+            backgroundColor: 'var(--bg)',
+            border: `1px solid var(--border)`,
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            zIndex: 1000,
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {practitioners.map(p => (
+              <button
+                key={p.id}
+                onClick={() => handleSelect(p.id)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: 'none',
+                  backgroundColor: p.id === selectedId ? 'var(--primary)' : 'transparent',
+                  color: p.id === selectedId ? 'white' : 'var(--text)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background-color 150ms',
+                  borderBottom: '1px solid var(--border)',
+                  ':hover': {
+                    backgroundColor: p.id === selectedId ? 'var(--primary)' : 'var(--surface)'
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  if (p.id !== selectedId) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = 'var(--surface)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (p.id !== selectedId) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {isUnassigned && (
         <div style={{
