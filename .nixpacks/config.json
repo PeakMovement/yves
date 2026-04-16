@@ -1,0 +1,8 @@
+{
+  "providers": ["node"],
+  "buildConfig": {
+    "node": {
+      "nodeVersion": "18"
+    }
+  }
+}
