@@ -807,28 +807,30 @@ export interface SymptomAnalysisResult {
   matched_guidelines?: string[];
 }
 
-export async function analyzeSymptom(
-  symptomPrompt: string,
-  clientId: string
-): Promise<SymptomAnalysisResult> {
+export async function storeSymptomQuery(
+  clientId: string,
+  queryText: string,
+  redFlagDetected: boolean,
+  confidenceScore: number
+): Promise<void> {
   try {
-    console.log('analyzeSymptom: Invoking edge function', { symptomPrompt, clientId });
-    const response = await supabase.functions.invoke('analyze-symptom', {
-      body: {
-        symptom_prompt: symptomPrompt,
-        client_id: clientId,
-      },
-    });
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('symptom_queries')
+        .insert({
+          client_id: clientId,
+          query_text: queryText,
+          red_flag_detected: redFlagDetected,
+          confidence_score: confidenceScore,
+        });
 
-    console.log('analyzeSymptom: Response received', response);
-
-    if (response.error) {
-      throw new Error(response.error.message || 'Unknown error from edge function');
+      if (error) {
+        console.error('Failed to store symptom query:', error);
+        // Don't throw - storage failure shouldn't break the analysis
+      }
     }
-
-    return response.data as SymptomAnalysisResult;
   } catch (error) {
-    console.error('Error analyzing symptom:', error);
-    throw error;
+    console.error('Error storing symptom query:', error);
+    // Silent fail - analysis already succeeded
   }
 }

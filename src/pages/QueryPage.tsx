@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { analyzeSymptom } from '../lib/store';
+import { storeSymptomQuery } from '../lib/store';
+import { analyzeSymptomLocal } from '../lib/symptomAnalysis';
 import { getLoggedInClientId } from '../hooks/useClient';
 
 const EXAMPLE_PROMPTS = [
@@ -43,9 +44,13 @@ export default function QueryPage() {
     setAnalyzing(true);
 
     try {
-      console.log('Calling analyzeSymptom with:', { prompt, clientId });
-      const analysisResult = await analyzeSymptom(prompt, clientId);
+      console.log('Analyzing symptom locally:', { prompt, clientId });
+      const analysisResult = analyzeSymptomLocal(prompt);
       console.log('Analysis result:', analysisResult);
+
+      // Store the query for learning (fire and forget)
+      storeSymptomQuery(clientId, prompt, analysisResult.red_flag_detected, analysisResult.confidence_score);
+
       setResult(analysisResult);
     } catch (err) {
       console.error('Error during analysis:', err);
