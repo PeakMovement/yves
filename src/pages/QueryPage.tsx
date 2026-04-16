@@ -71,17 +71,20 @@ export default function QueryPage() {
         symptom: prompt,
         score: result.matched_score,
       });
-      await createContactRequest(
+      const success = await createContactRequest(
         clientId,
         client.practitioner_id,
         prompt,
         result.matched_score || 0
       );
-      console.log('Contact request sent successfully');
-      setContacted(true);
+      if (success) {
+        console.log('Contact request sent successfully');
+        setContacted(true);
+      }
     } catch (err) {
       console.error('Error contacting professional:', err);
-      setError('Failed to send notification. Please try again.');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send notification. Please try again.';
+      setError(errorMsg);
     } finally {
       setContacting(false);
     }

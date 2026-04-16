@@ -929,22 +929,27 @@ export async function createContactRequest(
   practitionerId: string,
   symptomDescription: string,
   symptomScore: number,
-): Promise<void> {
-  if (isSupabaseConfigured()) {
-    try {
-      await supabase.from('contact_requests').insert({
-        id: uuid(),
-        client_id: clientId,
-        practitioner_id: practitionerId,
-        symptom_description: symptomDescription,
-        symptom_score: symptomScore,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error('Error creating contact request:', err);
-    }
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Database not configured');
   }
+
+  const { error } = await supabase.from('contact_requests').insert({
+    id: uuid(),
+    client_id: clientId,
+    practitioner_id: practitionerId,
+    symptom_description: symptomDescription,
+    symptom_score: symptomScore,
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error('Error creating contact request:', error.message);
+    throw new Error(`Failed to send notification: ${error.message}`);
+  }
+
+  return true;
 }
 
 export async function storeSymptomQuery(
