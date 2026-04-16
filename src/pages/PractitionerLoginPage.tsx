@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
-import { getPractitioners, validatePractitionerPassword } from '../lib/store';
+import { getPractitioners } from '../lib/store';
 import { loginPractitioner } from '../hooks/usePractitioner';
 import type { Practitioner } from '../types/database';
 
@@ -9,7 +9,6 @@ export default function PractitionerLoginPage() {
   const navigate = useNavigate();
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
   const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [authenticating, setAuthenticating] = useState(false);
@@ -36,22 +35,12 @@ export default function PractitionerLoginPage() {
       return;
     }
 
-    if (!password.trim()) {
-      setError('Please enter your password');
-      return;
-    }
-
     setAuthenticating(true);
     const selected = practitioners.find((p) => p.login_code === code);
     setAuthenticating(false);
 
     if (!selected) {
       setError('Invalid practitioner code');
-      return;
-    }
-
-    if (!validatePractitionerPassword(selected, password)) {
-      setError('Incorrect password');
       return;
     }
 
@@ -83,23 +72,11 @@ export default function PractitionerLoginPage() {
             placeholder="Practitioner Code"
             value={code}
             onChange={(e) => {
-              setCode(e.target.value.toUpperCase());
+              setCode(e.target.value);
               setError('');
             }}
             autoFocus
             autoComplete="off"
-          />
-
-          <input
-            type="password"
-            className="form-input"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError('');
-            }}
-            autoComplete="current-password"
           />
           {error && <p className="login-error">{error}</p>}
           <button type="submit" className="btn btn-primary login-btn" disabled={authenticating}>
