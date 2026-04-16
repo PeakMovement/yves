@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Navigate } from 'react-router-dom';
-import { ClipboardCheck, BarChart3, TrendingUp, LogOut } from 'lucide-react';
+import { ClipboardCheck, BarChart3, TrendingUp, MessageSquare, LogOut } from 'lucide-react';
 import { getLoggedInClientId, logoutClient } from '../hooks/useClient';
 
 export default function ClientLayout() {
@@ -45,6 +45,10 @@ export default function ClientLayout() {
         <NavLink to="/app/progress" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <TrendingUp size={20} />
           <span>Progress</span>
+        </NavLink>
+        <NavLink to="/app/query" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <MessageSquare size={20} />
+          <span>Query</span>
         </NavLink>
       </nav>
     </div>
