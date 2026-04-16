@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useActiveClient } from '../hooks/useClient';
 import { getCheckIns, getSymptoms, getSymptomEntriesBySymptom } from '../lib/store';
-import type { CheckIn, Symptom } from '../types/database';
+import type { CheckIn, Symptom, Client } from '../types/database';
+import ProfessionalSelector from '../components/ProfessionalSelector';
 import MiniChart from '../components/MiniChart';
 import { formatDate, changeLabel, changeColor, feelingEmoji, painColor, timeAgo } from '../lib/utils';
 import { AlertTriangle, Pill, MessageSquare } from 'lucide-react';
 
 export default function TimelinePage() {
-  const client = useActiveClient();
+  const initialClient = useActiveClient();
+  const [client, setClient] = useState<Client | null>(initialClient);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [symptomData, setSymptomData] = useState<Record<string, number[]>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setClient(initialClient);
+  }, [initialClient]);
 
   useEffect(() => {
     if (client) {
@@ -40,6 +46,13 @@ export default function TimelinePage() {
         <h2>Your Timeline</h2>
         <p>{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''} recorded</p>
       </div>
+
+      {client && (
+        <ProfessionalSelector
+          client={client}
+          onUpdate={(updated) => setClient(updated)}
+        />
+      )}
 
       {painData.length > 1 && (
         <div className="card chart-card">

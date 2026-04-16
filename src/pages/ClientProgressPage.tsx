@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useActiveClient } from '../hooks/useClient';
 import { getCheckIns, getSymptoms, getSymptomEntriesBySymptom, generateReport } from '../lib/store';
-import type { CheckIn, Symptom, FollowUpReport } from '../types/database';
+import type { CheckIn, Symptom, FollowUpReport, Client } from '../types/database';
 import MiniChart from '../components/MiniChart';
+import ProfessionalSelector from '../components/ProfessionalSelector';
 import { trendLabel, trendColor, painColor } from '../lib/utils';
 import {
   TrendingUp,
@@ -15,12 +16,17 @@ import {
 } from 'lucide-react';
 
 export default function ClientProgressPage() {
-  const client = useActiveClient();
+  const initialClient = useActiveClient();
+  const [client, setClient] = useState<Client | null>(initialClient);
   const [report, setReport] = useState<FollowUpReport | null>(null);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [symptomData, setSymptomData] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setClient(initialClient);
+  }, [initialClient]);
 
   useEffect(() => {
     if (client) {
@@ -66,6 +72,13 @@ export default function ClientProgressPage() {
       <div className="page-header">
         <h2>Your Progress</h2>
       </div>
+
+      {client && (
+        <ProfessionalSelector
+          client={client}
+          onUpdate={(updated) => setClient(updated)}
+        />
+      )}
 
       <div className="progress-trend-card card">
         <div className="trend-display">

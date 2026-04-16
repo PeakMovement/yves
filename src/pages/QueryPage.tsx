@@ -3,6 +3,7 @@ import { AlertCircle, Send } from 'lucide-react';
 import { storeSymptomQuery, createContactRequest, getClient } from '../lib/store';
 import { analyzeSymptomLocal } from '../lib/symptomAnalysis';
 import { getLoggedInClientId } from '../hooks/useClient';
+import ProfessionalSelector from '../components/ProfessionalSelector';
 import type { Client } from '../types/database';
 
 const EXAMPLE_PROMPTS = [
@@ -260,6 +261,12 @@ export default function QueryPage() {
   // Show input form
   return (
     <div className="checkin-page">
+      {client && (
+        <ProfessionalSelector
+          client={client}
+          onUpdate={(updated) => setClient(updated)}
+        />
+      )}
       <div className="checkin-card">
         <div className="step-content">
           <h2>What symptoms are you feeling?</h2>
