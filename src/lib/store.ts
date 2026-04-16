@@ -797,3 +797,35 @@ export async function seedDefaultClients() {
   // No seeding needed — all real client data lives in Supabase
   // and persists across deploys.
 }
+
+// ── Symptom Query Analysis ──────────────────────────────
+
+export interface SymptomAnalysisResult {
+  red_flag_detected: boolean;
+  confidence_score: number;
+  suggested_next_step: string;
+  matched_guidelines?: string[];
+}
+
+export async function analyzeSymptom(
+  symptomPrompt: string,
+  clientId: string
+): Promise<SymptomAnalysisResult> {
+  try {
+    const response = await supabase.functions.invoke('analyze-symptom', {
+      body: {
+        symptom_prompt: symptomPrompt,
+        client_id: clientId,
+      },
+    });
+
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+
+    return response.data as SymptomAnalysisResult;
+  } catch (error) {
+    console.error('Error analyzing symptom:', error);
+    throw error;
+  }
+}

@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
+import { analyzeSymptom } from '../lib/store';
+import { getLoggedInClientId } from '../hooks/useClient';
 
 const EXAMPLE_PROMPTS = [
   'I have sharp pain in my lower back when I bend forward',
@@ -9,8 +12,12 @@ const EXAMPLE_PROMPTS = [
 ];
 
 export default function QueryPage() {
+  const clientId = getLoggedInClientId();
   const [prompt, setPrompt] = useState('');
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -19,6 +26,115 @@ export default function QueryPage() {
     return () => clearInterval(interval);
   }, []);
 
+  async function handleSubmit() {
+    if (!prompt.trim()) {
+      setError('Please describe your symptoms');
+      return;
+    }
+
+    if (!clientId) {
+      setError('Unable to identify user');
+      return;
+    }
+
+    setError('');
+    setAnalyzing(true);
+
+    try {
+      const analysisResult = await analyzeSymptom(prompt, clientId);
+      setResult(analysisResult);
+    } catch (err) {
+      setError('Failed to analyze symptoms. Please try again.');
+      console.error(err);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  // Show results
+  if (result) {
+    return (
+      <div className="checkin-page">
+        <div className="checkin-card">
+          <div className="step-content">
+            {result.red_flag_detected ? (
+              <>
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  padding: '16px',
+                  backgroundColor: '#fff7ed',
+                  border: '1px solid #fed7aa',
+                  borderRadius: 'var(--radius-sm)',
+                  marginBottom: '20px',
+                  alignItems: 'flex-start'
+                }}>
+                  <AlertCircle size={24} style={{ color: '#c2410c', flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <h3 style={{ color: '#c2410c', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
+                      Attention Needed
+                    </h3>
+                    <p style={{ color: '#92400e', fontSize: '14px', lineHeight: '1.5' }}>
+                      Based on your description, we recommend you {result.suggested_next_step.toLowerCase()}.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  padding: '16px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 'var(--radius-sm)',
+                  marginBottom: '20px'
+                }}>
+                  <div>
+                    <h3 style={{ color: '#166534', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
+                      All Good
+                    </h3>
+                    <p style={{ color: '#166534', fontSize: '14px', lineHeight: '1.5' }}>
+                      {result.suggested_next_step}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div style={{
+              padding: '12px',
+              backgroundColor: 'var(--bg)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '20px',
+              fontSize: '13px'
+            }}>
+              <p style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                <strong>Your symptoms:</strong>
+              </p>
+              <p style={{ color: 'var(--text)', fontStyle: 'italic' }}>{prompt}</p>
+            </div>
+
+            <div className="step-actions">
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setResult(null);
+                  setPrompt('');
+                }}
+              >
+                Ask Another Question
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show input form
   return (
     <div className="checkin-page">
       <div className="checkin-card">
@@ -50,9 +166,16 @@ export default function QueryPage() {
             <em>{EXAMPLE_PROMPTS[exampleIndex]}</em>
           </div>
 
+          {error && <p className="login-error" style={{ marginTop: '12px' }}>{error}</p>}
+
           <div className="step-actions">
-            <button className="btn btn-primary" style={{ flex: 1 }}>
-              Submit
+            <button
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+              onClick={handleSubmit}
+              disabled={analyzing}
+            >
+              {analyzing ? 'Analyzing...' : 'Submit'}
             </button>
           </div>
         </div>
