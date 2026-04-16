@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getPractitioners, updateClient, getClient } from '../lib/store';
+import { getPractitioners, updateClient } from '../lib/store';
 import type { Client, Practitioner } from '../types/database';
 import { User, AlertCircle } from 'lucide-react';
 
