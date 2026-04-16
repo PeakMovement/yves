@@ -17,7 +17,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Call emergency services immediately',
   },
   {
+    symptom: 'chest pain or pressure that is severe',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Call emergency services immediately',
+  },
+  {
     symptom: 'sudden loss of sensation in a limb',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Call emergency services immediately',
+  },
+  {
+    symptom: 'numbness or loss of sensation in limb',
     score: 10,
     output: 'Refer',
     actionMessage: 'Call emergency services immediately',
@@ -29,7 +41,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Call emergency services — possible stroke',
   },
   {
+    symptom: 'sudden weakness on one side',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Call emergency services — possible stroke',
+  },
+  {
     symptom: 'difficulty speaking or slurred speech',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Call emergency services — possible stroke',
+  },
+  {
+    symptom: 'slurred speech or difficulty speaking',
     score: 10,
     output: 'Refer',
     actionMessage: 'Call emergency services — possible stroke',
@@ -41,7 +65,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Emergency assessment required',
   },
   {
+    symptom: 'unable to control bladder or bowel',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Emergency assessment required',
+  },
+  {
     symptom: 'saddle numbness',
+    score: 10,
+    output: 'Refer',
+    actionMessage: 'Emergency assessment required',
+  },
+  {
+    symptom: 'numbness in saddle area',
     score: 10,
     output: 'Refer',
     actionMessage: 'Emergency assessment required',
@@ -53,7 +89,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Emergency assessment required',
   },
   {
+    symptom: 'worst headache ever',
+    score: 9,
+    output: 'Refer',
+    actionMessage: 'Emergency assessment required',
+  },
+  {
     symptom: 'neck pain after trauma with neurological signs',
+    score: 9,
+    output: 'Refer',
+    actionMessage: 'Do not move — call emergency services',
+  },
+  {
+    symptom: 'neck pain after injury with numbness or weakness',
     score: 9,
     output: 'Refer',
     actionMessage: 'Do not move — call emergency services',
@@ -65,7 +113,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Seek emergency assessment today',
   },
   {
+    symptom: 'cannot bear weight after falling',
+    score: 9,
+    output: 'Refer',
+    actionMessage: 'Seek emergency assessment today',
+  },
+  {
     symptom: 'severe burning pain radiating down both legs',
+    score: 9,
+    output: 'Refer',
+    actionMessage: 'Seek emergency assessment today',
+  },
+  {
+    symptom: 'burning pain radiating down legs',
     score: 9,
     output: 'Refer',
     actionMessage: 'Seek emergency assessment today',
@@ -79,7 +139,25 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Go see your assigned professional within 48 hours',
   },
   {
+    symptom: 'tingling radiating down my arm',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
+    symptom: 'arm tingling with pins and needles',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
     symptom: 'pins and needles in both hands',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
+    symptom: 'tingling in both hands',
     score: 7,
     output: 'Refer',
     actionMessage: 'Go see your assigned professional within 48 hours',
@@ -91,7 +169,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Go see your assigned professional urgently',
   },
   {
+    symptom: 'unable to bend neck',
+    score: 8,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional urgently',
+  },
+  {
     symptom: 'shooting pain below the knee',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
+    symptom: 'sharp shooting pain in knee',
     score: 7,
     output: 'Refer',
     actionMessage: 'Go see your assigned professional within 48 hours',
@@ -103,7 +193,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Go see your assigned professional today',
   },
   {
+    symptom: 'joint is swollen red and hot',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional today',
+  },
+  {
     symptom: 'unexplained weight loss with pain',
+    score: 8,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional urgently',
+  },
+  {
+    symptom: 'weight loss without trying with pain',
     score: 8,
     output: 'Refer',
     actionMessage: 'Go see your assigned professional urgently',
@@ -115,7 +217,25 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Go see your assigned professional within 48 hours',
   },
   {
+    symptom: 'pain wakes me at night',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
+    symptom: 'woken from sleep by pain',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 48 hours',
+  },
+  {
     symptom: 'pain at rest that does not improve with position',
+    score: 6,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional within 72 hours',
+  },
+  {
+    symptom: 'resting pain that does not go away',
     score: 6,
     output: 'Refer',
     actionMessage: 'Go see your assigned professional within 72 hours',
@@ -127,13 +247,31 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Go see your assigned professional today',
   },
   {
+    symptom: 'fever with joint pain',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional today',
+  },
+  {
     symptom: 'progressive muscle weakness over days',
     score: 7,
     output: 'Refer',
     actionMessage: 'Go see your assigned professional urgently',
   },
   {
+    symptom: 'muscle weakness getting worse',
+    score: 7,
+    output: 'Refer',
+    actionMessage: 'Go see your assigned professional urgently',
+  },
+  {
     symptom: 'jaw pain radiating to neck and chest',
+    score: 8,
+    output: 'Refer',
+    actionMessage: 'Seek urgent medical assessment',
+  },
+  {
+    symptom: 'pain in jaw radiating to neck',
     score: 8,
     output: 'Refer',
     actionMessage: 'Seek urgent medical assessment',
@@ -147,7 +285,25 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Logged — flag if still present in 5 days',
   },
   {
+    symptom: 'morning stiffness in lower back',
+    score: 4,
+    output: "Don't refer",
+    actionMessage: 'Logged — flag if still present in 5 days',
+  },
+  {
+    symptom: 'stiff lower back when i wake up',
+    score: 4,
+    output: "Don't refer",
+    actionMessage: 'Logged — flag if still present in 5 days',
+  },
+  {
     symptom: 'mild knee ache after training',
+    score: 3,
+    output: "Don't refer",
+    actionMessage: 'Logged — consider reducing training load',
+  },
+  {
+    symptom: 'knee ache from training',
     score: 3,
     output: "Don't refer",
     actionMessage: 'Logged — consider reducing training load',
@@ -159,7 +315,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Logged — monitor over next 3 sessions',
   },
   {
+    symptom: 'shoulder feels tired with limited movement',
+    score: 4,
+    output: "Don't refer",
+    actionMessage: 'Logged — monitor over next 3 sessions',
+  },
+  {
     symptom: 'general fatigue or low energy',
+    score: 3,
+    output: "Don't refer",
+    actionMessage: 'Logged — tracking sleep, HRV, and load',
+  },
+  {
+    symptom: 'tired or lacking energy',
     score: 3,
     output: "Don't refer",
     actionMessage: 'Logged — tracking sleep, HRV, and load',
@@ -171,7 +339,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Normal recovery — continue tracking',
   },
   {
+    symptom: 'sore muscles after training',
+    score: 1,
+    output: "Don't refer",
+    actionMessage: 'Normal recovery — continue tracking',
+  },
+  {
     symptom: 'tightness in hamstrings or hip flexors',
+    score: 3,
+    output: "Don't refer",
+    actionMessage: 'Logged — flag if worsening',
+  },
+  {
+    symptom: 'tight hamstrings or hip flexors',
     score: 3,
     output: "Don't refer",
     actionMessage: 'Logged — flag if worsening',
@@ -183,7 +363,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Logged — flag if recurring more than twice',
   },
   {
+    symptom: 'headache from training',
+    score: 4,
+    output: "Don't refer",
+    actionMessage: 'Logged — flag if recurring more than twice',
+  },
+  {
     symptom: 'slight swelling after activity',
+    score: 4,
+    output: "Don't refer",
+    actionMessage: 'Logged — flag if persists beyond 3 days',
+  },
+  {
+    symptom: 'swelling after activity',
     score: 4,
     output: "Don't refer",
     actionMessage: 'Logged — flag if persists beyond 3 days',
@@ -195,7 +387,19 @@ export const SYMPTOM_DATABASE: SymptomEntry[] = [
     actionMessage: 'Normal — continue tracking',
   },
   {
+    symptom: 'joint stiffness that gets better with movement',
+    score: 2,
+    output: "Don't refer",
+    actionMessage: 'Normal — continue tracking',
+  },
+  {
     symptom: 'general muscle ache after new exercise',
+    score: 2,
+    output: "Don't refer",
+    actionMessage: 'Normal — continue tracking',
+  },
+  {
+    symptom: 'muscle ache from new exercise',
     score: 2,
     output: "Don't refer",
     actionMessage: 'Normal — continue tracking',
@@ -211,95 +415,152 @@ export interface SymptomAnalysisResult {
   output?: 'Refer' | "Don't refer";
 }
 
+// Extract key phrases from a symptom string for better matching
+function extractKeyPhrases(text: string): string[] {
+  const phrases: string[] = [];
+  const words = text.toLowerCase().split(/\s+/);
+
+  // Add individual words
+  phrases.push(...words);
+
+  // Add common 2-word phrases
+  for (let i = 0; i < words.length - 1; i++) {
+    phrases.push(words[i] + ' ' + words[i + 1]);
+  }
+
+  // Add common 3-word phrases
+  for (let i = 0; i < words.length - 2; i++) {
+    phrases.push(words[i] + ' ' + words[i + 1] + ' ' + words[i + 2]);
+  }
+
+  return phrases;
+}
+
+interface MatchResult {
+  entry: SymptomEntry;
+  confidence: number;
+  matchType: 'exact' | 'phrase' | 'word';
+}
+
 export function analyzeSymptomLocal(symptomPrompt: string): SymptomAnalysisResult {
   const normalizedPrompt = symptomPrompt.toLowerCase();
+  const promptPhrases = extractKeyPhrases(normalizedPrompt);
   const promptWords = normalizedPrompt.split(/\s+/).filter(w => w.length > 0);
 
-  // Synonym mapping for common symptom variations
-  const synonymMap: Record<string, string[]> = {
-    'tingling': ['pins and needles', 'numbness', 'paresthesia'],
-    'pins and needles': ['tingling', 'numbness', 'paresthesia'],
-    'numbness': ['tingling', 'pins and needles', 'paresthesia'],
-    'sharp': ['severe', 'shooting', 'acute'],
-    'severe': ['sharp', 'intense', 'bad'],
-    'shooting': ['sharp', 'radiating'],
-    'radiating': ['shooting', 'down', 'along'],
-    'weakness': ['weak', 'can\'t', 'unable'],
-    'loss': ['lost', 'sudden loss'],
-    'ache': ['pain', 'soreness'],
-    'soreness': ['ache', 'sore'],
-  };
+  let bestMatch: MatchResult | null = null;
 
-  let bestMatch: SymptomEntry | null = null;
-  let bestMatchConfidence = 0;
-
+  // TIER 1: Exact phrase match (highest confidence)
   for (const entry of SYMPTOM_DATABASE) {
     const normalizedSymptom = entry.symptom.toLowerCase();
-    const symptomWords = normalizedSymptom.split(/\s+/).filter(w => w.length > 0);
 
-    // 1. Exact substring match (highest confidence)
-    if (normalizedPrompt.includes(normalizedSymptom)) {
-      if (bestMatchConfidence < 100) {
-        bestMatch = entry;
-        bestMatchConfidence = 100;
-      }
-      continue;
-    }
+    if (normalizedPrompt.includes(normalizedSymptom) || normalizedSymptom.includes(normalizedPrompt)) {
+      const match: MatchResult = {
+        entry,
+        confidence: 100,
+        matchType: 'exact',
+      };
 
-    // 2. Check if symptom is contained in prompt (high confidence)
-    if (normalizedPrompt.includes(normalizedSymptom)) {
-      if (bestMatchConfidence < 95) {
-        bestMatch = entry;
-        bestMatchConfidence = 95;
-      }
-      continue;
-    }
-
-    // 3. Count meaningful word matches with synonym support
-    let matchingWords = 0;
-    for (const symptomWord of symptomWords) {
-      // Direct word match
-      if (promptWords.includes(symptomWord)) {
-        matchingWords++;
-        continue;
-      }
-
-      // Check for synonyms
-      const synonyms = synonymMap[symptomWord] || [];
-      if (synonyms.some(syn => promptWords.some(pw => pw.includes(syn) || syn.includes(pw)))) {
-        matchingWords++;
-        continue;
-      }
-
-      // Partial match (word starts with symptom word)
-      if (promptWords.some(pw => pw.startsWith(symptomWord) || symptomWord.startsWith(pw))) {
-        matchingWords++;
+      if (!bestMatch || match.confidence > bestMatch.confidence) {
+        bestMatch = match;
       }
     }
+  }
 
-    // Calculate confidence based on word match percentage
-    const matchPercentage = symptomWords.length > 0 ? (matchingWords / symptomWords.length) * 100 : 0;
+  // TIER 2: Partial phrase match (user input contains key phrases from symptom)
+  if (!bestMatch) {
+    for (const entry of SYMPTOM_DATABASE) {
+      const symptomPhrases = extractKeyPhrases(entry.symptom);
 
-    // Require at least 40% of symptom words to match, or at least 2 words
-    if (matchPercentage >= 40 || matchingWords >= 2) {
-      if (matchPercentage > bestMatchConfidence) {
-        bestMatch = entry;
-        bestMatchConfidence = matchPercentage;
+      // Count how many symptom phrases appear in the prompt
+      const matchingPhrases = symptomPhrases.filter(phrase =>
+        phrase.length > 2 && normalizedPrompt.includes(phrase)
+      ).length;
+
+      // Require at least 2 matching phrases or 50% match
+      if (matchingPhrases >= 2 || (matchingPhrases > 0 && matchingPhrases >= symptomPhrases.length * 0.5)) {
+        const confidence = Math.min(90, (matchingPhrases / Math.max(symptomPhrases.length, 1)) * 100);
+
+        const match: MatchResult = {
+          entry,
+          confidence,
+          matchType: 'phrase',
+        };
+
+        if (!bestMatch || match.confidence > bestMatch.confidence) {
+          bestMatch = match;
+        }
+      }
+    }
+  }
+
+  // TIER 3: Word-based matching (fallback with synonyms and word overlap)
+  if (!bestMatch) {
+    const synonymMap: Record<string, string[]> = {
+      'tingling': ['pins', 'needles', 'numbness', 'paresthesia'],
+      'pins': ['tingling', 'needles', 'numbness'],
+      'needles': ['pins', 'tingling', 'numbness'],
+      'numbness': ['tingling', 'pins', 'needles'],
+      'sharp': ['severe', 'shooting', 'acute'],
+      'severe': ['sharp', 'intense', 'bad', 'serious'],
+      'shooting': ['sharp', 'radiating', 'pain'],
+      'radiating': ['shooting', 'down', 'along', 'extending'],
+      'weakness': ['weak', 'cannot', 'unable'],
+      'loss': ['lost', 'losing'],
+      'ache': ['pain', 'soreness', 'aching'],
+      'soreness': ['ache', 'sore', 'pain'],
+    };
+
+    for (const entry of SYMPTOM_DATABASE) {
+      const symptomWords = entry.symptom.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+
+      let matchingWords = 0;
+      for (const symptomWord of symptomWords) {
+        // Direct word match
+        if (promptWords.includes(symptomWord)) {
+          matchingWords++;
+          continue;
+        }
+
+        // Synonym match
+        const synonyms = synonymMap[symptomWord] || [];
+        if (synonyms.some(syn => promptWords.includes(syn))) {
+          matchingWords++;
+          continue;
+        }
+
+        // Partial word match
+        if (promptWords.some(pw => pw.includes(symptomWord) || symptomWord.includes(pw))) {
+          matchingWords++;
+        }
+      }
+
+      // Require at least 40% of symptom words to match or at least 2 words
+      const matchPercentage = symptomWords.length > 0 ? (matchingWords / symptomWords.length) * 100 : 0;
+      if (matchPercentage >= 40 || matchingWords >= 2) {
+        const match: MatchResult = {
+          entry,
+          confidence: Math.min(70, matchPercentage),
+          matchType: 'word',
+        };
+
+        if (!bestMatch || match.confidence > bestMatch.confidence) {
+          bestMatch = match;
+        }
       }
     }
   }
 
   // Generate response
-  if (bestMatch && bestMatchConfidence > 0) {
-    const redFlagDetected = bestMatch.score >= 6;
+  if (bestMatch && bestMatch.confidence > 0) {
+    const redFlagDetected = bestMatch.entry.score >= 6;
 
     return {
       red_flag_detected: redFlagDetected,
-      confidence_score: bestMatch.score * 10,
-      suggested_next_step: bestMatch.actionMessage,
-      matched_symptom: bestMatch.symptom,
-      matched_score: bestMatch.score,
-      output: bestMatch.output,
+      confidence_score: bestMatch.entry.score * 10,
+      suggested_next_step: bestMatch.entry.actionMessage,
+      matched_symptom: bestMatch.entry.symptom,
+      matched_score: bestMatch.entry.score,
+      output: bestMatch.entry.output,
     };
   }
 
