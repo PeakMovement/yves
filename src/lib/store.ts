@@ -807,7 +807,43 @@ export interface SymptomAnalysisResult {
   matched_guidelines?: string[];
 }
 
-export async function storeSymptomQuery(
+export async function getClient(id: string): Promise<Client | undefined> {
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (!error && data) return data as Client;
+  }
+  return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
+}
+  clientId: string,
+  practitionerId: string,
+  symptomDescription: string,
+  symptomScore: number
+): Promise<void> {
+  try {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('contact_requests')
+        .insert({
+          client_id: clientId,
+          practitioner_id: practitionerId,
+          symptom_description: symptomDescription,
+          symptom_score: symptomScore,
+        });
+
+      if (error) {
+        console.error('Failed to create contact request:', error);
+        throw new Error('Failed to send notification to professional');
+      }
+    }
+  } catch (error) {
+    console.error('Error creating contact request:', error);
+    throw error;
+  }
+}
   clientId: string,
   queryText: string,
   redFlagDetected: boolean,

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
-import { storeSymptomQuery } from '../lib/store';
+import { AlertCircle, Send } from 'lucide-react';
+import { storeSymptomQuery, createContactRequest, getClient } from '../lib/store';
 import { analyzeSymptomLocal } from '../lib/symptomAnalysis';
 import { getLoggedInClientId } from '../hooks/useClient';
+import type { Client } from '../types/database';
 
 const EXAMPLE_PROMPTS = [
   'I have sharp pain in my lower back when I bend forward',
@@ -19,6 +20,9 @@ export default function QueryPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [client, setClient] = useState<Client | null>(null);
+  const [contacting, setContacting] = useState(false);
+  const [contacted, setContacted] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,6 +30,42 @@ export default function QueryPage() {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (clientId) {
+        try {
+          const clientData = await getClient(clientId);
+          setClient(clientData || null);
+        } catch (err) {
+          console.error('Failed to load client profile:', err);
+        }
+      }
+    })();
+  }, [clientId]);
+
+  async function handleContactProfessional() {
+    if (!client?.practitioner_id) {
+      setError('Unable to identify your assigned professional');
+      return;
+    }
+
+    setContacting(true);
+    try {
+      await createContactRequest(
+        clientId!,
+        client.practitioner_id,
+        prompt,
+        result.matched_score || 0
+      );
+      setContacted(true);
+    } catch (err) {
+      console.error('Error contacting professional:', err);
+      setError('Failed to send notification. Please try again.');
+    } finally {
+      setContacting(false);
+    }
+  }
 
   async function handleSubmit() {
     console.log('Submit clicked', { prompt: prompt.trim(), clientId });
@@ -136,13 +176,39 @@ export default function QueryPage() {
               <p style={{ color: 'var(--text)', fontStyle: 'italic' }}>{prompt}</p>
             </div>
 
-            <div className="step-actions">
+            <div className="step-actions" style={{ flexDirection: 'column', gap: '12px' }}>
+              {result.red_flag_detected && !contacted && (
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, backgroundColor: '#c2410c' }}
+                  onClick={handleContactProfessional}
+                  disabled={contacting}
+                >
+                  <Send size={16} />
+                  {contacting ? 'Sending...' : 'Contact My Professional'}
+                </button>
+              )}
+              {contacted && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 'var(--radius-sm)',
+                  textAlign: 'center',
+                  color: '#166534',
+                  fontSize: '13px',
+                  fontWeight: '500'
+                }}>
+                  ✓ Notification sent to your professional
+                </div>
+              )}
               <button
                 className="btn btn-primary"
                 style={{ flex: 1 }}
                 onClick={() => {
                   setResult(null);
                   setPrompt('');
+                  setContacted(false);
                 }}
               >
                 Ask Another Question
