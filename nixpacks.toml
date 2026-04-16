@@ -1,5 +1,0 @@
-[build]
-cmd = "npm install && npm run build && cp serve.json dist/serve.json"
-
-providers = ["node"]
-
