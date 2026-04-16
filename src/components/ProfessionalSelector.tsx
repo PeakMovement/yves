@@ -112,9 +112,12 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
             fontSize: '13px',
             color: '#6366f1',
             fontWeight: '600',
-            marginLeft: 'auto'
+            marginLeft: 'auto',
+            backgroundColor: '#eef2ff',
+            padding: '4px 8px',
+            borderRadius: '4px'
           }}>
-            {currentProfessional.name}
+            {currentProfessional.name && currentProfessional.name.trim() ? currentProfessional.name : 'Selected'}
           </span>
         )}
       </div>
@@ -135,29 +138,52 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
           </span>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {practitioners.map(p => (
-            <button
-              key={p.id}
-              onClick={() => handleSelectPractitioner(p.id)}
-              disabled={updating}
-              style={{
-                padding: '10px 12px',
-                fontSize: '14px',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                backgroundColor: p.id === currentClient.practitioner_id ? '#6366f1' : 'var(--bg)',
-                color: p.id === currentClient.practitioner_id ? 'white' : 'var(--text)',
-                cursor: updating ? 'wait' : 'pointer',
-                opacity: updating ? 0.6 : 1,
-                fontWeight: p.id === currentClient.practitioner_id ? '600' : '400',
-                transition: 'all 150ms',
-                textAlign: 'left'
-              }}
-            >
-              {p.name}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {practitioners.map(p => {
+            const displayName = p.name && p.name.trim() ? p.name : `Professional (${p.id.slice(0, 8)})`;
+            const isSelected = p.id === currentClient.practitioner_id;
+
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleSelectPractitioner(p.id)}
+                disabled={updating}
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '14px',
+                  fontWeight: isSelected ? '600' : '500',
+                  border: `1px solid ${isSelected ? '#6366f1' : 'var(--border)'}`,
+                  borderRadius: '6px',
+                  backgroundColor: isSelected ? '#6366f1' : 'var(--bg)',
+                  color: isSelected ? 'white' : 'var(--text)',
+                  cursor: updating ? 'wait' : 'pointer',
+                  opacity: updating ? 0.6 : 1,
+                  transition: 'all 150ms ease',
+                  textAlign: 'left',
+                  width: '100%',
+                  display: 'block',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected && !updating) {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#6366f1';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                  }
+                }}
+              >
+                {displayName}
+              </button>
+            );
+          })}
         </div>
       )}
 
