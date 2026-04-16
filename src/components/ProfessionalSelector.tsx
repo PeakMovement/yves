@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getPractitioners, updateClient } from '../lib/store';
+import { getPractitioners, updateClient, getClient } from '../lib/store';
 import type { Client, Practitioner } from '../types/database';
-import { User, AlertCircle, ChevronDown } from 'lucide-react';
+import { User, AlertCircle } from 'lucide-react';
 
 interface ProfessionalSelectorProps {
   client: Client;
@@ -10,72 +10,63 @@ interface ProfessionalSelectorProps {
 
 export default function ProfessionalSelector({ client, onUpdate }: ProfessionalSelectorProps) {
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [selectedId, setSelectedId] = useState(client.practitioner_id);
+  const [currentClient, setCurrentClient] = useState<Client>(client);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loadError, setLoadError] = useState('');
 
+  // Load practitioners on mount
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
+        console.log('Loading practitioners...');
         const list = await getPractitioners();
-        console.log('✓ Practitioners loaded:', list.length, list);
-        if (list && list.length > 0) {
-          setPractitioners(list);
-          setLoadError('');
-        } else {
-          setLoadError('No practitioners found');
-          setPractitioners([]);
-        }
+        console.log('Practitioners loaded:', list);
+        setPractitioners(list || []);
       } catch (err) {
-        console.error('✗ Failed to load practitioners:', err);
-        setLoadError('Failed to load practitioners');
-        setPractitioners([]);
+        console.error('Error loading practitioners:', err);
+        setError('Failed to load practitioners');
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  async function handleSelect(newId: string) {
-    if (!newId) {
-      setDropdownOpen(false);
-      return;
-    }
+  // Update when client prop changes
+  useEffect(() => {
+    setCurrentClient(client);
+  }, [client]);
 
-    setDropdownOpen(false);
+  const handleSelectPractitioner = async (practitionerId: string) => {
+    if (!practitionerId) return;
+
     setUpdating(true);
     setError('');
     setSuccess(false);
 
     try {
-      console.log('Updating client', client.id, 'with practitioner', newId);
-      const updated = await updateClient(client.id, { practitioner_id: newId });
+      console.log('Updating client', currentClient.id, 'with practitioner', practitionerId);
+      const updated = await updateClient(currentClient.id, { practitioner_id: practitionerId });
 
       if (updated) {
-        console.log('✓ Client updated successfully:', updated);
-        setSelectedId(newId);
+        console.log('Update successful:', updated);
+        setCurrentClient(updated);
         setSuccess(true);
         onUpdate?.(updated);
         setTimeout(() => setSuccess(false), 3000);
       } else {
-        console.error('Update returned falsy');
-        setError('Failed to update. Please try again.');
+        setError('Failed to save. Please try again.');
       }
     } catch (err) {
-      console.error('✗ Error updating professional:', err);
-      setError(err instanceof Error ? err.message : 'Error updating assignment');
+      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setUpdating(false);
     }
-  }
+  };
 
-  const currentProfessional = practitioners.find(p => p.id === selectedId);
-  const isUnassigned = selectedId && !currentProfessional && practitioners.length > 0;
+  const currentProfessional = practitioners.find(p => p.id === currentClient.practitioner_id);
 
   if (loading) {
     return (
@@ -84,11 +75,11 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         backgroundColor: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-sm)',
-        marginBottom: '16px',
-        fontSize: '14px',
-        color: 'var(--text-muted)'
+        marginBottom: '16px'
       }}>
-        Loading professionals...
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+          Loading...
+        </div>
       </div>
     );
   }
@@ -96,11 +87,10 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   return (
     <div style={{
       padding: '16px',
-      backgroundColor: isUnassigned ? '#fef2f2' : 'var(--surface)',
-      border: `1px solid ${isUnassigned ? '#fecaca' : 'var(--border)'}`,
+      backgroundColor: !currentProfessional ? '#fef2f2' : 'var(--surface)',
+      border: `1px solid ${!currentProfessional ? '#fecaca' : 'var(--border)'}`,
       borderRadius: 'var(--radius-sm)',
-      marginBottom: '16px',
-      position: 'relative'
+      marginBottom: '16px'
     }}>
       <div style={{
         display: 'flex',
@@ -108,114 +98,70 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         gap: '8px',
         marginBottom: '12px'
       }}>
-        <User size={16} style={{ color: isUnassigned ? '#dc2626' : 'var(--text-secondary)' }} />
+        <User size={16} style={{ color: !currentProfessional ? '#dc2626' : '#6366f1' }} />
         <label style={{
           fontSize: '14px',
           fontWeight: '500',
           color: 'var(--text)',
           margin: 0
         }}>
-          Assigned Professional {currentProfessional && `• ${currentProfessional.name}`}
+          Assigned Professional
         </label>
-        {loadError && (
-          <span style={{ fontSize: '12px', color: '#dc2626', marginLeft: 'auto' }}>
-            {loadError}
+        {currentProfessional && (
+          <span style={{
+            fontSize: '13px',
+            color: '#6366f1',
+            fontWeight: '600',
+            marginLeft: 'auto'
+          }}>
+            {currentProfessional.name}
           </span>
         )}
       </div>
 
-      <div style={{ position: 'relative', zIndex: 100 }}>
-        <button
-          onClick={() => !updating && setDropdownOpen(!dropdownOpen)}
-          disabled={updating || practitioners.length === 0}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            fontSize: '14px',
-            border: `1px solid ${isUnassigned ? '#fca5a5' : 'var(--border)'}`,
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--bg)',
-            color: currentProfessional ? 'var(--text)' : 'var(--text-muted)',
-            cursor: updating || practitioners.length === 0 ? 'not-allowed' : 'pointer',
-            opacity: updating ? 0.6 : 1,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            transition: 'all 200ms'
-          }}
-        >
-          <span>{currentProfessional?.name || 'Select a professional'}</span>
-          <ChevronDown size={16} style={{
-            transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 200ms'
-          }} />
-        </button>
+      {practitioners.length === 0 ? (
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '12px',
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '4px',
+          alignItems: 'flex-start'
+        }}>
+          <AlertCircle size={14} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+          <span style={{ fontSize: '12px', color: '#7f1d1d' }}>
+            No professionals in system. Contact support.
+          </span>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {practitioners.map(p => (
+            <button
+              key={p.id}
+              onClick={() => handleSelectPractitioner(p.id)}
+              disabled={updating}
+              style={{
+                padding: '10px 12px',
+                fontSize: '14px',
+                border: '1px solid var(--border)',
+                borderRadius: '4px',
+                backgroundColor: p.id === currentClient.practitioner_id ? '#6366f1' : 'var(--bg)',
+                color: p.id === currentClient.practitioner_id ? 'white' : 'var(--text)',
+                cursor: updating ? 'wait' : 'pointer',
+                opacity: updating ? 0.6 : 1,
+                fontWeight: p.id === currentClient.practitioner_id ? '600' : '400',
+                transition: 'all 150ms',
+                textAlign: 'left'
+              }}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {dropdownOpen && !updating && practitioners.length > 0 && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            marginTop: '4px',
-            backgroundColor: 'var(--bg)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            zIndex: 1000,
-            maxHeight: '300px',
-            overflowY: 'auto',
-            minWidth: '100%'
-          }}>
-            {practitioners && practitioners.length > 0 ? (
-              practitioners.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    console.log('Selected practitioner:', p.id, p.name);
-                    handleSelect(p.id);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 12px',
-                    fontSize: '14px',
-                    fontWeight: p.id === selectedId ? '600' : '400',
-                    border: 'none',
-                    backgroundColor: p.id === selectedId ? '#6366f1' : 'transparent',
-                    color: p.id === selectedId ? 'white' : 'var(--text)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'background-color 150ms',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (p.id !== selectedId) {
-                      const btn = e.currentTarget as HTMLButtonElement;
-                      btn.style.backgroundColor = 'var(--surface)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (p.id !== selectedId) {
-                      const btn = e.currentTarget as HTMLButtonElement;
-                      btn.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  {p.name}
-                </button>
-              ))
-            ) : (
-              <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                No practitioners available
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {isUnassigned && (
+      {!currentProfessional && practitioners.length > 0 && (
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -228,7 +174,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         }}>
           <AlertCircle size={14} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
           <span style={{ fontSize: '12px', color: '#7f1d1d' }}>
-            No professional assigned. Select one to enable contact features.
+            Select a professional to enable contact features.
           </span>
         </div>
       )}
@@ -243,7 +189,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
           fontSize: '12px',
           color: '#7f1d1d'
         }}>
-          {error}
+          Error: {error}
         </div>
       )}
 
