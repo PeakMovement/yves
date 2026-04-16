@@ -16,16 +16,25 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
+        setLoading(true);
         const list = await getPractitioners();
-        setPractitioners(list);
-        console.log('Loaded practitioners:', list);
+        console.log('✓ Practitioners loaded:', list.length, list);
+        if (list && list.length > 0) {
+          setPractitioners(list);
+          setLoadError('');
+        } else {
+          setLoadError('No practitioners found');
+          setPractitioners([]);
+        }
       } catch (err) {
-        setError('Failed to load practitioners');
-        console.error('Error loading practitioners:', err);
+        console.error('✗ Failed to load practitioners:', err);
+        setLoadError('Failed to load practitioners');
+        setPractitioners([]);
       } finally {
         setLoading(false);
       }
@@ -33,38 +42,40 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   }, []);
 
   async function handleSelect(newId: string) {
-    if (!newId || newId === selectedId) {
+    if (!newId) {
       setDropdownOpen(false);
       return;
     }
 
-    setSelectedId(newId);
     setDropdownOpen(false);
     setUpdating(true);
     setError('');
     setSuccess(false);
 
     try {
+      console.log('Updating client', client.id, 'with practitioner', newId);
       const updated = await updateClient(client.id, { practitioner_id: newId });
+
       if (updated) {
+        console.log('✓ Client updated successfully:', updated);
+        setSelectedId(newId);
         setSuccess(true);
         onUpdate?.(updated);
         setTimeout(() => setSuccess(false), 3000);
       } else {
-        setError('Failed to update professional assignment');
-        setSelectedId(client.practitioner_id);
+        console.error('Update returned falsy');
+        setError('Failed to update. Please try again.');
       }
     } catch (err) {
-      setError('Error updating professional assignment');
-      console.error(err);
-      setSelectedId(client.practitioner_id);
+      console.error('✗ Error updating professional:', err);
+      setError(err instanceof Error ? err.message : 'Error updating assignment');
     } finally {
       setUpdating(false);
     }
   }
 
-  const currentProfessional = practitioners.find(p => p.id === client.practitioner_id);
-  const isUnassigned = !currentProfessional && practitioners.length > 0;
+  const currentProfessional = practitioners.find(p => p.id === selectedId);
+  const isUnassigned = selectedId && !currentProfessional && practitioners.length > 0;
 
   if (loading) {
     return (
@@ -77,27 +88,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         fontSize: '14px',
         color: 'var(--text-muted)'
       }}>
-        Loading professional information...
-      </div>
-    );
-  }
-
-  if (practitioners.length === 0) {
-    return (
-      <div style={{
-        padding: '16px',
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fecaca',
-        borderRadius: 'var(--radius-sm)',
-        marginBottom: '16px',
-        display: 'flex',
-        gap: '8px',
-        alignItems: 'flex-start'
-      }}>
-        <AlertCircle size={16} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
-        <span style={{ fontSize: '13px', color: '#7f1d1d' }}>
-          No professionals available in the system. Please contact support.
-        </span>
+        Loading professionals...
       </div>
     );
   }
@@ -124,14 +115,19 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
           color: 'var(--text)',
           margin: 0
         }}>
-          Assigned Professional {currentProfessional && `(${currentProfessional.name})`}
+          Assigned Professional {currentProfessional && `• ${currentProfessional.name}`}
         </label>
+        {loadError && (
+          <span style={{ fontSize: '12px', color: '#dc2626', marginLeft: 'auto' }}>
+            {loadError}
+          </span>
+        )}
       </div>
 
       <div style={{ position: 'relative', zIndex: 100 }}>
         <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          disabled={updating}
+          onClick={() => !updating && setDropdownOpen(!dropdownOpen)}
+          disabled={updating || practitioners.length === 0}
           style={{
             width: '100%',
             padding: '10px 12px',
@@ -139,8 +135,8 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
             border: `1px solid ${isUnassigned ? '#fca5a5' : 'var(--border)'}`,
             borderRadius: 'var(--radius-sm)',
             backgroundColor: 'var(--bg)',
-            color: 'var(--text)',
-            cursor: updating ? 'wait' : 'pointer',
+            color: currentProfessional ? 'var(--text)' : 'var(--text-muted)',
+            cursor: updating || practitioners.length === 0 ? 'not-allowed' : 'pointer',
             opacity: updating ? 0.6 : 1,
             display: 'flex',
             justifyContent: 'space-between',
@@ -155,7 +151,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
           }} />
         </button>
 
-        {dropdownOpen && !updating && (
+        {dropdownOpen && !updating && practitioners.length > 0 && (
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -163,43 +159,58 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
             right: 0,
             marginTop: '4px',
             backgroundColor: 'var(--bg)',
-            border: `1px solid var(--border)`,
+            border: '1px solid var(--border)',
             borderRadius: 'var(--radius-sm)',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             zIndex: 1000,
-            maxHeight: '200px',
-            overflowY: 'auto'
+            maxHeight: '300px',
+            overflowY: 'auto',
+            minWidth: '100%'
           }}>
-            {practitioners.map(p => (
-              <button
-                key={p.id}
-                onClick={() => handleSelect(p.id)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  border: 'none',
-                  backgroundColor: p.id === selectedId ? 'var(--primary)' : 'transparent',
-                  color: p.id === selectedId ? 'white' : 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background-color 150ms',
-                  borderBottom: '1px solid var(--border)'
-                }}
-                onMouseEnter={(e) => {
-                  if (p.id !== selectedId) {
-                    (e.target as HTMLButtonElement).style.backgroundColor = 'var(--surface)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (p.id !== selectedId) {
-                    (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                {p.name}
-              </button>
-            ))}
+            {practitioners && practitioners.length > 0 ? (
+              practitioners.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    console.log('Selected practitioner:', p.id, p.name);
+                    handleSelect(p.id);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 12px',
+                    fontSize: '14px',
+                    fontWeight: p.id === selectedId ? '600' : '400',
+                    border: 'none',
+                    backgroundColor: p.id === selectedId ? '#6366f1' : 'transparent',
+                    color: p.id === selectedId ? 'white' : 'var(--text)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background-color 150ms',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'block'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (p.id !== selectedId) {
+                      const btn = e.currentTarget as HTMLButtonElement;
+                      btn.style.backgroundColor = 'var(--surface)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (p.id !== selectedId) {
+                      const btn = e.currentTarget as HTMLButtonElement;
+                      btn.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  {p.name}
+                </button>
+              ))
+            ) : (
+              <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                No practitioners available
+              </div>
+            )}
           </div>
         )}
       </div>
