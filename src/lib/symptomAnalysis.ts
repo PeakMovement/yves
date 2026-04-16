@@ -512,30 +512,33 @@ export function analyzeSymptomLocal(symptomPrompt: string): SymptomAnalysisResul
     for (const entry of SYMPTOM_DATABASE) {
       const symptomWords = entry.symptom.toLowerCase().split(/\s+/).filter(w => w.length > 0);
 
+      // Filter out common filler words that shouldn't match alone
+      const contentWords = symptomWords.filter(w => !['in', 'or', 'on', 'at', 'to', 'a', 'the', 'and'].includes(w));
+
       let matchingWords = 0;
-      for (const symptomWord of symptomWords) {
+      for (const symptomWord of contentWords) {
         // Direct word match
         if (promptWords.includes(symptomWord)) {
           matchingWords++;
           continue;
         }
 
-        // Synonym match
+        // Synonym match (only for key medical terms)
         const synonyms = synonymMap[symptomWord] || [];
         if (synonyms.some(syn => promptWords.includes(syn))) {
           matchingWords++;
           continue;
         }
 
-        // Partial word match
-        if (promptWords.some(pw => pw.includes(symptomWord) || symptomWord.includes(pw))) {
+        // Partial word match only for longer words (to avoid false positives)
+        if (symptomWord.length > 5 && promptWords.some(pw => pw.includes(symptomWord) || (symptomWord.includes(pw) && pw.length > 3))) {
           matchingWords++;
         }
       }
 
-      // Require at least 40% of symptom words to match or at least 2 words
-      const matchPercentage = symptomWords.length > 0 ? (matchingWords / symptomWords.length) * 100 : 0;
-      if (matchPercentage >= 40 || matchingWords >= 2) {
+      // Require at least 50% of content words to match AND at least 2 matching words
+      const matchPercentage = contentWords.length > 0 ? (matchingWords / contentWords.length) * 100 : 0;
+      if (matchPercentage >= 50 && matchingWords >= 2) {
         const match: MatchResult = {
           entry,
           confidence: Math.min(70, matchPercentage),
