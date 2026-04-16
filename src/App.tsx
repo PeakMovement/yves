@@ -11,7 +11,6 @@ import CheckInPage from './pages/CheckInPage';
 import QueryPage from './pages/QueryPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
-import QueryPage from './pages/QueryPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminClientDetailPage from './pages/AdminClientDetailPage';
@@ -45,7 +44,6 @@ function App() {
           <Route path="query" element={<QueryPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="progress" element={<ClientProgressPage />} />
-          <Route path="query" element={<QueryPage />} />
         </Route>
 
         {/* Admin / Practitioner Portal */}
