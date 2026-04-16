@@ -27,6 +27,8 @@ export default function QueryPage() {
   }, []);
 
   async function handleSubmit() {
+    console.log('Submit clicked', { prompt: prompt.trim(), clientId });
+
     if (!prompt.trim()) {
       setError('Please describe your symptoms');
       return;
@@ -41,9 +43,12 @@ export default function QueryPage() {
     setAnalyzing(true);
 
     try {
+      console.log('Calling analyzeSymptom with:', { prompt, clientId });
       const analysisResult = await analyzeSymptom(prompt, clientId);
+      console.log('Analysis result:', analysisResult);
       setResult(analysisResult);
     } catch (err) {
+      console.error('Error during analysis:', err);
       setError('Failed to analyze symptoms. Please try again.');
       console.error(err);
     } finally {

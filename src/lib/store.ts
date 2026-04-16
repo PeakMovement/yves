@@ -812,6 +812,7 @@ export async function analyzeSymptom(
   clientId: string
 ): Promise<SymptomAnalysisResult> {
   try {
+    console.log('analyzeSymptom: Invoking edge function', { symptomPrompt, clientId });
     const response = await supabase.functions.invoke('analyze-symptom', {
       body: {
         symptom_prompt: symptomPrompt,
@@ -819,8 +820,10 @@ export async function analyzeSymptom(
       },
     });
 
+    console.log('analyzeSymptom: Response received', response);
+
     if (response.error) {
-      throw new Error(response.error.message);
+      throw new Error(response.error.message || 'Unknown error from edge function');
     }
 
     return response.data as SymptomAnalysisResult;
