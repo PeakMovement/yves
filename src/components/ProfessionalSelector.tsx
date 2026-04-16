@@ -184,10 +184,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'background-color 150ms',
-                  borderBottom: '1px solid var(--border)',
-                  ':hover': {
-                    backgroundColor: p.id === selectedId ? 'var(--primary)' : 'var(--surface)'
-                  }
+                  borderBottom: '1px solid var(--border)'
                 }}
                 onMouseEnter={(e) => {
                   if (p.id !== selectedId) {
