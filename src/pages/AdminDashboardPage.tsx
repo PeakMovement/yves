@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClients, getCheckIns, hasCheckedInToday, getDeviceAnalytics } from '../lib/store';
+import { getLoggedInPractitionerId } from '../hooks/usePractitioner';
+import ContactRequestsPanel from '../components/ContactRequestsPanel';
 import type { Client, CheckIn } from '../types/database';
 import { formatDate } from '../lib/utils';
 import {
@@ -48,12 +50,16 @@ export default function AdminDashboardPage() {
 
   if (loading) return <div className="page-loading">Loading...</div>;
 
+  const practitionerId = getLoggedInPractitionerId();
+
   return (
     <div className="admin-dashboard">
       <div className="admin-page-header">
         <h2>Dashboard</h2>
         <p className="admin-date">Today is {formatDate(new Date().toISOString())}</p>
       </div>
+
+      {practitionerId && <ContactRequestsPanel practitionerId={practitionerId} />}
 
       <div className="dashboard-stats">
         <div className="dash-stat-card">

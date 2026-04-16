@@ -7,6 +7,7 @@ import ClientLoginPage from './pages/ClientLoginPage';
 import PractitionerLoginPage from './pages/PractitionerLoginPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import CheckInPage from './pages/CheckInPage';
+import QueryPage from './pages/QueryPage';
 import TimelinePage from './pages/TimelinePage';
 import ClientProgressPage from './pages/ClientProgressPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -35,6 +36,7 @@ function App() {
         <Route path="/app" element={<ClientLayout />}>
           <Route index element={<Navigate to="/app/checkin" replace />} />
           <Route path="checkin" element={<CheckInPage />} />
+          <Route path="query" element={<QueryPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="progress" element={<ClientProgressPage />} />
         </Route>
