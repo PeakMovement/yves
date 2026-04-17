@@ -886,12 +886,15 @@ export async function createPractitioner(
   customLoginCode?: string,
 ): Promise<Practitioner> {
   const loginCode = (customLoginCode || (await generateUniqueLoginCode())).toUpperCase();
+  const now = new Date().toISOString();
 
   const practitioner: Practitioner = {
     id: uuid(),
     name,
     login_code: loginCode,
-    created_at: new Date().toISOString(),
+    password_hash: hashPassword(loginCode),
+    created_at: now,
+    updated_at: now,
   };
 
   if (isSupabaseConfigured()) {
