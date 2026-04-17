@@ -26,10 +26,8 @@ export default function ClientRegistrationPage() {
     (async () => {
       try {
         const list = await getPractitioners();
-        setPractitioners(list);
-        if (list.length > 0) {
-          setFormData((prev) => ({ ...prev, practitioner_id: list[0].id }));
-        }
+        const visible = list.filter((p) => p.name && p.name.toLowerCase() !== 'admin');
+        setPractitioners(visible);
       } catch (err) {
         console.error('Failed to load practitioners:', err);
         setError('Failed to load practitioners. Please try again.');
@@ -171,6 +169,7 @@ export default function ClientRegistrationPage() {
               }}
               disabled={creating || practitioners.length === 0}
             >
+              <option value="">Select your practitioner</option>
               {practitioners.length === 0 ? (
                 <option disabled>No practitioners available</option>
               ) : (
