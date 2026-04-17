@@ -885,12 +885,7 @@ export async function createPractitioner(
   name: string,
   customLoginCode?: string,
 ): Promise<Practitioner> {
-<<<<<<< HEAD
   const loginCode = (customLoginCode || (await generateUniqueLoginCode())).toUpperCase();
-=======
-  const loginCode = (customLoginCode || (await generateUniqueLoginCode('practitioner'))).toUpperCase();
-  const passwordHash = hashPassword(initialPassword);
->>>>>>> claude/connect-and-push-main-x3mja
 
   const practitioner: Practitioner = {
     id: uuid(),
