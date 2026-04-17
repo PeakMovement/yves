@@ -900,14 +900,17 @@ export async function createPractitioner(
       .insert(practitioner)
       .select()
       .single();
+    if (!error && inserted) {
+      const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+      local.push(inserted as Practitioner);
+      writeLocal(STORAGE_KEYS.practitioners, local);
+      return inserted as Practitioner;
+    }
+    // Fall back to localStorage if Supabase fails
     if (error) {
       console.error('Supabase insert error:', error.message);
-      throw new Error(`Failed to create practitioner: ${error.message}`);
+      console.log('Falling back to localStorage for practitioner');
     }
-    const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
-    local.push(inserted as Practitioner);
-    writeLocal(STORAGE_KEYS.practitioners, local);
-    return inserted as Practitioner;
   }
 
   const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
