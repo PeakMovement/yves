@@ -30,13 +30,14 @@ export default function PractitionerLoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!code.trim()) {
+    const trimmedCode = code.trim().toUpperCase();
+    if (!trimmedCode) {
       setError('Please enter your practitioner code');
       return;
     }
 
     setAuthenticating(true);
-    const selected = practitioners.find((p) => p.login_code === code);
+    const selected = practitioners.find((p) => p.login_code === trimmedCode);
     setAuthenticating(false);
 
     if (!selected) {
