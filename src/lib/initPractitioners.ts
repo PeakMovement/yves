@@ -22,9 +22,9 @@ export async function initializePractitioners() {
 
     console.log(`Found ${existing.length} existing practitioners`);
 
-    // Create any missing practitioners
+    // Ensure all default practitioners exist with correct codes
     for (const practitioner of DEFAULT_PRACTITIONERS) {
-      const exists = existing.some((p) => p.name === practitioner.name);
+      const exists = existing.some((p) => p.name === practitioner.name && p.login_code === practitioner.loginCode);
       if (!exists) {
         try {
           await createPractitioner(
