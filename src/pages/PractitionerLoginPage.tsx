@@ -36,7 +36,7 @@ export default function PractitionerLoginPage() {
     }
 
     setAuthenticating(true);
-    const selected = practitioners.find((p) => p.login_code === code);
+    const selected = practitioners.find((p) => p.login_code === code.toUpperCase());
     setAuthenticating(false);
 
     if (!selected) {
