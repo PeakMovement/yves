@@ -892,7 +892,7 @@ export async function createPractitioner(
     id: uuid(),
     name,
     login_code: loginCode,
-    password_hash: hashPassword(loginCode),
+    password_hash: loginCode,
     created_at: now,
     updated_at: now,
   };
