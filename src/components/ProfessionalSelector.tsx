@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getPractitioners, updateClient } from '../lib/store';
 import type { Client, Practitioner } from '../types/database';
-import { User, AlertCircle } from 'lucide-react';
+import { User, AlertCircle, ChevronDown } from 'lucide-react';
 
 interface ProfessionalSelectorProps {
   client: Client;
@@ -15,6 +15,8 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load practitioners on mount
   useEffect(() => {
@@ -38,9 +40,25 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
     setCurrentClient(client);
   }, [client]);
 
-  const handleSelectPractitioner = async (practitionerId: string) => {
-    if (!practitionerId) return;
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectPractitioner = async (practitionerId: string) => {
+    if (!practitionerId) {
+      setDropdownOpen(false);
+      return;
+    }
+
+    setDropdownOpen(false);
     setUpdating(true);
     setError('');
     setSuccess(false);
@@ -67,6 +85,9 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   };
 
   const currentProfessional = practitioners.find(p => p.id === currentClient.practitioner_id);
+  const displayName = currentProfessional?.name && currentProfessional.name.trim()
+    ? currentProfessional.name
+    : 'Select professional';
 
   if (loading) {
     return (
@@ -78,7 +99,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         marginBottom: '16px'
       }}>
         <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-          Loading...
+          Loading professionals...
         </div>
       </div>
     );
@@ -87,8 +108,8 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
   return (
     <div style={{
       padding: '16px',
-      backgroundColor: !currentProfessional ? '#fef2f2' : 'var(--surface)',
-      border: `1px solid ${!currentProfessional ? '#fecaca' : 'var(--border)'}`,
+      backgroundColor: !currentProfessional && practitioners.length > 0 ? '#fef2f2' : 'var(--surface)',
+      border: `1px solid ${!currentProfessional && practitioners.length > 0 ? '#fecaca' : 'var(--border)'}`,
       borderRadius: 'var(--radius-sm)',
       marginBottom: '16px'
     }}>
@@ -107,19 +128,6 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
         }}>
           Assigned Professional
         </label>
-        {currentProfessional && (
-          <span style={{
-            fontSize: '13px',
-            color: '#6366f1',
-            fontWeight: '600',
-            marginLeft: 'auto',
-            backgroundColor: '#eef2ff',
-            padding: '4px 8px',
-            borderRadius: '4px'
-          }}>
-            {currentProfessional.name && currentProfessional.name.trim() ? currentProfessional.name : 'Selected'}
-          </span>
-        )}
       </div>
 
       {practitioners.length === 0 ? (
@@ -138,52 +146,93 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
           </span>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {practitioners.map(p => {
-            const displayName = p.name && p.name.trim() ? p.name : `Professional (${p.id.slice(0, 8)})`;
-            const isSelected = p.id === currentClient.practitioner_id;
+        <div ref={dropdownRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => !updating && setDropdownOpen(!dropdownOpen)}
+            disabled={updating}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              fontSize: '14px',
+              border: `1px solid ${!currentProfessional ? '#fca5a5' : 'var(--border)'}`,
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--bg)',
+              color: currentProfessional ? 'var(--text)' : 'var(--text-muted)',
+              cursor: updating ? 'wait' : 'pointer',
+              opacity: updating ? 0.6 : 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              transition: 'all 200ms',
+              fontWeight: currentProfessional ? '500' : '400'
+            }}
+          >
+            <span>{displayName}</span>
+            <ChevronDown size={16} style={{
+              transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 200ms'
+            }} />
+          </button>
 
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => handleSelectPractitioner(p.id)}
-                disabled={updating}
-                style={{
-                  padding: '12px 14px',
-                  fontSize: '14px',
-                  fontWeight: isSelected ? '600' : '500',
-                  border: `1px solid ${isSelected ? '#6366f1' : 'var(--border)'}`,
-                  borderRadius: '6px',
-                  backgroundColor: isSelected ? '#6366f1' : 'var(--bg)',
-                  color: isSelected ? 'white' : 'var(--text)',
-                  cursor: updating ? 'wait' : 'pointer',
-                  opacity: updating ? 0.6 : 1,
-                  transition: 'all 150ms ease',
-                  textAlign: 'left',
-                  width: '100%',
-                  display: 'block',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected && !updating) {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#6366f1';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                  }
-                }}
-              >
-                {displayName}
-              </button>
-            );
-          })}
+          {dropdownOpen && practitioners.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '4px',
+              backgroundColor: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              zIndex: 1000,
+              maxHeight: '300px',
+              overflowY: 'auto',
+              minWidth: '100%'
+            }}>
+              {practitioners.map((p) => {
+                const pName = p.name && p.name.trim() ? p.name : `Professional (${p.id.slice(0, 8)})`;
+                const isSelected = p.id === currentClient.practitioner_id;
+
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectPractitioner(p.id)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 12px',
+                      fontSize: '14px',
+                      fontWeight: isSelected ? '600' : '400',
+                      border: 'none',
+                      backgroundColor: isSelected ? '#6366f1' : 'transparent',
+                      color: isSelected ? 'white' : 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 150ms',
+                      borderBottom: '1px solid var(--border)',
+                      display: 'block',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    {pName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
