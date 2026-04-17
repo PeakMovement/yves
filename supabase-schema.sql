@@ -6,7 +6,6 @@ create table if not exists clients (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
   email text not null default '',
-  practitioner_id text not null default 'default',
   created_at timestamptz not null default now(),
   next_appointment timestamptz,
   primary_complaint text not null default '',
