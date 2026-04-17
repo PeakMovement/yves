@@ -885,7 +885,7 @@ export async function createPractitioner(
   name: string,
   customLoginCode?: string,
 ): Promise<Practitioner> {
-  const loginCode = customLoginCode || (await generateUniqueLoginCode());
+  const loginCode = (customLoginCode || (await generateUniqueLoginCode())).toUpperCase();
 
   const practitioner: Practitioner = {
     id: uuid(),
