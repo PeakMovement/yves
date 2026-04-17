@@ -191,7 +191,6 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
               minWidth: '100%'
             }}>
               {practitioners.map((p) => {
-                const pName = p.name && p.name.trim() ? p.name : `Professional (${p.id.slice(0, 8)})`;
                 const isSelected = p.id === currentClient.practitioner_id;
 
                 return (
@@ -227,7 +226,7 @@ export default function ProfessionalSelector({ client, onUpdate }: ProfessionalS
                       }
                     }}
                   >
-                    {pName}
+                    {p.name}
                   </button>
                 );
               })}
