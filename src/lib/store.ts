@@ -49,10 +49,15 @@ function generateLoginCode(): string {
   return code.toString();
 }
 
-async function generateUniqueLoginCode(): Promise<string> {
+async function generateUniqueLoginCode(type: 'client' | 'practitioner' = 'client'): Promise<string> {
   const code = generateLoginCode();
-  const existing = await getClients();
-  if (existing.some((c) => c.login_code === code)) return generateUniqueLoginCode();
+  if (type === 'client') {
+    const existing = await getClients();
+    if (existing.some((c) => c.login_code === code)) return generateUniqueLoginCode('client');
+  } else {
+    const existing = await getPractitioners();
+    if (existing.some((p) => p.login_code === code)) return generateUniqueLoginCode('practitioner');
+  }
   return code;
 }
 
@@ -856,7 +861,7 @@ export async function createPractitioner(
   initialPassword: string,
   customLoginCode?: string,
 ): Promise<Practitioner> {
-  const loginCode = customLoginCode || (await generateUniqueLoginCode());
+  const loginCode = (customLoginCode || (await generateUniqueLoginCode('practitioner'))).toUpperCase();
   const passwordHash = hashPassword(initialPassword);
 
   const practitioner: Practitioner = {
