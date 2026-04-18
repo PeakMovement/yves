@@ -33,37 +33,15 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
-// ── Response Validation ──────────────────────────────────
-
-/**
- * Safely handle Supabase errors with fallback to localStorage
- */
-function handleSupabaseError(error: any, message: string): void {
-  console.error(`${message}:`, error?.message || error);
-}
-
-/**
- * Validate that required fields exist in a database response
- */
-function validateClientResponse(data: any): data is Client {
-  return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.id === 'string' &&
-    typeof data.full_name === 'string' &&
-    typeof data.email === 'string' &&
-    typeof data.practitioner_id === 'string' &&
-    typeof data.login_code === 'string' &&
-    typeof data.created_at === 'string'
-  );
-}
-
-
 function isSupabaseConfigured(): boolean {
-  // Check if both required Supabase env vars are configured
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  return !!url && !!key && !url.includes('placeholder') && !key.includes('placeholder');
+  const url = import.meta.env.VITE_SUPABASE_URL || 'https://teehpkaxgqnzwqtmxfhe.supabase.co';
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  return !!url && !url.includes('placeholder') && (!!key || url.includes('teehpkaxgqnzwqtmxfhe'));
+}
+
+// Returns the display name for a practitioner regardless of which column is populated
+export function getPractitionerDisplayName(p: Practitioner): string {
+  return p.full_name || p.name || '';
 }
 
 // ── Login codes ─────────────────────────────────────────
@@ -76,19 +54,10 @@ function generateLoginCode(): string {
   return code.toString();
 }
 
-async function generateUniqueLoginCode(retries = 0): Promise<string> {
-  // Prevent infinite recursion with max retries
-  if (retries > 10) {
-    throw new Error('Failed to generate unique login code after 10 attempts. Too many clients exist.');
-  }
-
+async function generateUniqueLoginCode(): Promise<string> {
   const code = generateLoginCode();
   const existing = await getClients();
-
-  if (existing.some((c) => c.login_code === code)) {
-    return generateUniqueLoginCode(retries + 1);
-  }
-
+  if (existing.some((c) => c.login_code === code)) return generateUniqueLoginCode();
   return code;
 }
 
@@ -115,15 +84,7 @@ export async function getClient(id: string): Promise<Client | undefined> {
       .select('*')
       .eq('id', id)
       .single();
-    if (!error && data) {
-      if (validateClientResponse(data)) {
-        return data;
-      } else {
-        handleSupabaseError(null, 'Invalid client response from database');
-      }
-    } else if (error) {
-      handleSupabaseError(error, 'Failed to fetch client from Supabase');
-    }
+    if (!error && data) return data as Client;
   }
   return readLocal<Client>(STORAGE_KEYS.clients).find((c) => c.id === id);
 }
@@ -844,7 +805,7 @@ export async function getPractitioners(): Promise<Practitioner[]> {
     const { data, error } = await supabase
       .from('practitioners')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
     if (!error && data) {
       writeLocal(STORAGE_KEYS.practitioners, data);
       return data as Practitioner[];
@@ -859,7 +820,7 @@ export async function getPractitioner(id: string): Promise<Practitioner | undefi
       .from('practitioners')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     if (!error && data) return data as Practitioner;
   }
   return readLocal<Practitioner>(STORAGE_KEYS.practitioners).find((p) => p.id === id);
@@ -872,7 +833,7 @@ export async function getPractitionerByLoginCode(code: string): Promise<Practiti
       .from('practitioners')
       .select('*')
       .eq('login_code', upper)
-      .single();
+      .maybeSingle();
     if (!error && data) return data as Practitioner;
   }
   return readLocal<Practitioner>(STORAGE_KEYS.practitioners).find(
@@ -880,21 +841,37 @@ export async function getPractitionerByLoginCode(code: string): Promise<Practiti
   );
 }
 
+// Simple password hash for client-side use (NOT production-grade)
+function hashPassword(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
 
 export async function createPractitioner(
   name: string,
+  initialPassword: string,
   customLoginCode?: string,
 ): Promise<Practitioner> {
-  const loginCode = (customLoginCode || (await generateUniqueLoginCode())).toUpperCase();
-  const now = new Date().toISOString();
+  const loginCode = customLoginCode || (await generateUniqueLoginCode());
+  const passwordHash = hashPassword(initialPassword);
 
   const practitioner: Practitioner = {
     id: uuid(),
+    full_name: name,
     name,
     login_code: loginCode,
-    password_hash: loginCode,
-    created_at: now,
-    updated_at: now,
+    password_hash: passwordHash,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   if (isSupabaseConfigured()) {
@@ -903,17 +880,14 @@ export async function createPractitioner(
       .insert(practitioner)
       .select()
       .single();
-    if (!error && inserted) {
-      const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
-      local.push(inserted as Practitioner);
-      writeLocal(STORAGE_KEYS.practitioners, local);
-      return inserted as Practitioner;
-    }
-    // Fall back to localStorage if Supabase fails
     if (error) {
       console.error('Supabase insert error:', error.message);
-      console.log('Falling back to localStorage for practitioner');
+      throw new Error(`Failed to create practitioner: ${error.message}`);
     }
+    const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+    local.push(inserted as Practitioner);
+    writeLocal(STORAGE_KEYS.practitioners, local);
+    return inserted as Practitioner;
   }
 
   const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
@@ -922,10 +896,42 @@ export async function createPractitioner(
   return practitioner;
 }
 
+export async function updatePractitionerPassword(id: string, newPassword: string): Promise<Practitioner | undefined> {
+  const passwordHash = hashPassword(newPassword);
+  const updated_at = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    const { data: updated, error } = await supabase
+      .from('practitioners')
+      .update({ password_hash: passwordHash, updated_at })
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && updated) {
+      const local = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+      const idx = local.findIndex((p) => p.id === id);
+      if (idx !== -1) {
+        local[idx] = updated as Practitioner;
+        writeLocal(STORAGE_KEYS.practitioners, local);
+      }
+      return updated as Practitioner;
+    }
+  }
+
+  const practitioners = readLocal<Practitioner>(STORAGE_KEYS.practitioners);
+  const idx = practitioners.findIndex((p) => p.id === id);
+  if (idx === -1) return undefined;
+  practitioners[idx] = {
+    ...practitioners[idx],
+    password_hash: passwordHash,
+    updated_at,
+  };
+  writeLocal(STORAGE_KEYS.practitioners, practitioners);
+  return practitioners[idx];
+}
+
 export function validatePractitionerPassword(practitioner: Practitioner, password: string): boolean {
-  // Simple password validation - in production should use proper hashing
-  // For now, check if password matches the stored password_hash field
-  return (practitioner as any).password_hash === password || password === 'password';
+  return verifyPassword(password, practitioner.password_hash);
 }
 
 // ── Contact requests (symptom red flag notifications) ──────
@@ -935,43 +941,21 @@ export async function createContactRequest(
   practitionerId: string,
   symptomDescription: string,
   symptomScore: number,
-): Promise<boolean> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Database not configured');
-  }
-
-  try {
-    // Verify the client exists in the database first
-    const existingClient = await getClient(clientId);
-    if (!existingClient) {
-      throw new Error('Your profile was not found in the system. Please log in again.');
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('contact_requests').insert({
+        id: uuid(),
+        client_id: clientId,
+        practitioner_id: practitionerId,
+        symptom_description: symptomDescription,
+        symptom_score: symptomScore,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Error creating contact request:', err);
     }
-
-    // Verify the practitioner exists
-    const existingPractitioner = await getPractitioner(practitionerId);
-    if (!existingPractitioner) {
-      throw new Error('Your assigned professional was not found. Please contact support.');
-    }
-
-    const { error } = await supabase.from('contact_requests').insert({
-      id: uuid(),
-      client_id: clientId,
-      practitioner_id: practitionerId,
-      symptom_description: symptomDescription,
-      symptom_score: symptomScore,
-      is_read: false,
-      created_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error('Error creating contact request:', error.message);
-      throw new Error(error.message);
-    }
-
-    return true;
-  } catch (err) {
-    console.error('Contact request error:', err);
-    throw err instanceof Error ? err : new Error('Failed to send notification');
   }
 }
 

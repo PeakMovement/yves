@@ -1,6 +1,7 @@
 export interface Practitioner {
   id: string;
-  name: string;
+  full_name: string;
+  name?: string;
   login_code: string;
   password_hash: string;
   created_at: string;
