@@ -40,10 +40,14 @@ export default function QueryPage() {
     (async () => {
       if (clientId) {
         try {
-          const clientData = await getClient(clientId);
+          const [clientData, practitionerList] = await Promise.all([
+            getClient(clientId),
+            getPractitioners(),
+          ]);
           setClient(clientData || null);
+          setPractitioners(practitionerList);
         } catch (err) {
-          console.error('Failed to load client profile:', err);
+          console.error('Failed to load data:', err);
         }
       }
     })();
