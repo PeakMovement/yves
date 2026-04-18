@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, Send, UserCheck, ChevronRight } from 'lucide-react';
-import { storeSymptomQuery, createContactRequest, getClient, getPractitioners, updateClient, getPractitionerDisplayName } from '../lib/store';
+import { CircleAlert as AlertCircle, Send, UserCheck, ChevronRight, Check } from 'lucide-react';
+import { storeSymptomQuery, createContactRequest, getPractitionerDisplayName } from '../lib/store';
 import { analyzeSymptomLocal } from '../lib/symptomAnalysis';
 import { getLoggedInClientId } from '../hooks/useClient';
-import type { Client, Practitioner } from '../types/database';
+import { useClientContext } from '../context/ClientContext';
 
 const EXAMPLE_PROMPTS = [
   'I have sharp pain in my lower back when I bend forward',
@@ -15,19 +15,16 @@ const EXAMPLE_PROMPTS = [
 
 export default function QueryPage() {
   const clientId = getLoggedInClientId();
+  const { client, practitioners, assignedPractitioner, selectPractitioner } = useClientContext();
   const [prompt, setPrompt] = useState('');
   const [exampleIndex, setExampleIndex] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
-  const [client, setClient] = useState<Client | null>(null);
   const [contacting, setContacting] = useState(false);
   const [contacted, setContacted] = useState(false);
-  const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [loadingPractitioners, setLoadingPractitioners] = useState(false);
   const [selectingPractitioner, setSelectingPractitioner] = useState(false);
   const [savingPractitioner, setSavingPractitioner] = useState(false);
-  const [practitionerSaved, setPractitionerSaved] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -36,60 +33,17 @@ export default function QueryPage() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      if (clientId) {
-        try {
-          const [clientData, practitionerList] = await Promise.all([
-            getClient(clientId),
-            getPractitioners(),
-          ]);
-          setClient(clientData || null);
-          setPractitioners(practitionerList);
-        } catch (err) {
-          console.error('Failed to load data:', err);
-        }
-      }
-    })();
-  }, [clientId]);
-
-  async function loadPractitioners() {
-    setLoadingPractitioners(true);
-    try {
-      const data = await getPractitioners();
-      setPractitioners(data);
-    } catch (err) {
-      console.error('Failed to load practitioners:', err);
-    } finally {
-      setLoadingPractitioners(false);
-    }
-  }
-
-  function handleOpenPractitionerSelector() {
-    setSelectingPractitioner(true);
-    setPractitionerSaved(false);
-    setError('');
-    loadPractitioners();
-  }
-
-  async function handleSelectPractitioner(practitioner: Practitioner) {
-    if (!clientId) return;
+  async function handleSelectPractitioner(practitionerId: string) {
     setSavingPractitioner(true);
     setError('');
     try {
-      const updated = await updateClient(clientId, { practitioner_id: practitioner.id });
-      if (updated) {
-        setClient(updated);
-        setPractitionerSaved(true);
-        setTimeout(() => {
-          setSelectingPractitioner(false);
-          setPractitionerSaved(false);
-        }, 1200);
-      }
+      await selectPractitioner(practitionerId);
+      setTimeout(() => {
+        setSelectingPractitioner(false);
+        setSavingPractitioner(false);
+      }, 800);
     } catch (err) {
-      console.error('Failed to save practitioner:', err);
       setError('Could not save your selection. Please try again.');
-    } finally {
       setSavingPractitioner(false);
     }
   }
@@ -118,7 +72,6 @@ export default function QueryPage() {
       );
       setContacted(true);
     } catch (err) {
-      console.error('Error contacting professional:', err);
       setError('Failed to send notification. Please try again.');
     } finally {
       setContacting(false);
@@ -147,7 +100,6 @@ export default function QueryPage() {
     }
   }
 
-  const assignedPractitioner = practitioners.find((p) => p.id === client?.practitioner_id);
   const assignedName = assignedPractitioner ? getPractitionerDisplayName(assignedPractitioner) : null;
 
   if (selectingPractitioner) {
@@ -160,11 +112,7 @@ export default function QueryPage() {
               Choose the practitioner who is managing your care
             </p>
 
-            {loadingPractitioners ? (
-              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>
-                Loading professionals...
-              </div>
-            ) : practitioners.length === 0 ? (
+            {practitioners.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>
                 No professionals found. Please contact your clinic.
               </div>
@@ -172,11 +120,10 @@ export default function QueryPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
                 {practitioners.map((p) => {
                   const isSelected = client?.practitioner_id === p.id;
-                  const justSaved = isSelected && practitionerSaved;
                   return (
                     <button
                       key={p.id}
-                      onClick={() => handleSelectPractitioner(p)}
+                      onClick={() => handleSelectPractitioner(p.id)}
                       disabled={savingPractitioner}
                       style={{
                         display: 'flex',
@@ -200,10 +147,10 @@ export default function QueryPage() {
                         <UserCheck size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
                         {getPractitionerDisplayName(p)}
                       </span>
-                      {justSaved ? (
-                        <span style={{ fontSize: '13px', fontWeight: '500' }}>Saved ✓</span>
+                      {isSelected ? (
+                        <Check size={16} />
                       ) : (
-                        <ChevronRight size={16} style={{ opacity: isSelected ? 1 : 0.4 }} />
+                        <ChevronRight size={16} style={{ opacity: 0.4 }} />
                       )}
                     </button>
                   );
@@ -257,7 +204,7 @@ export default function QueryPage() {
                 <AlertCircle size={24} style={{ color: '#c2410c', flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <h3 style={{ color: '#c2410c', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
-                    ⚠️ Medical Referral Recommended
+                    Medical Referral Recommended
                   </h3>
                   <p style={{ color: '#92400e', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
                     {result.suggested_next_step}
@@ -281,7 +228,7 @@ export default function QueryPage() {
               }}>
                 <div>
                   <h3 style={{ color: '#166534', marginBottom: '4px', fontSize: '16px', fontWeight: '600' }}>
-                    ✓ Monitoring Recommended
+                    Monitoring Recommended
                   </h3>
                   <p style={{ color: '#166534', fontSize: '14px', lineHeight: '1.5', marginBottom: '8px' }}>
                     {result.suggested_next_step}
@@ -319,7 +266,7 @@ export default function QueryPage() {
                       <button
                         className="btn btn-primary"
                         style={{ backgroundColor: '#c2410c' }}
-                        onClick={handleOpenPractitionerSelector}
+                        onClick={() => setSelectingPractitioner(true)}
                       >
                         <UserCheck size={16} />
                         Select a Professional
@@ -350,7 +297,7 @@ export default function QueryPage() {
                   fontSize: '13px',
                   fontWeight: '500',
                 }}>
-                  ✓ Notification sent to {assignedName ?? 'your professional'}
+                  Notification sent to {assignedName ?? 'your professional'}
                 </div>
               )}
 
@@ -390,7 +337,7 @@ export default function QueryPage() {
 
           {client && (
             <div
-              onClick={handleOpenPractitionerSelector}
+              onClick={() => setSelectingPractitioner(true)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -408,12 +355,7 @@ export default function QueryPage() {
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <UserCheck size={15} style={{ opacity: 0.6 }} />
                 {client.practitioner_id
-                  ? <>
-                      My professional:
-                      <strong style={{ marginLeft: '4px' }}>
-                        {assignedName ?? 'Loading...'}
-                      </strong>
-                    </>
+                  ? <>My professional: <strong style={{ marginLeft: '4px' }}>{assignedName ?? 'Loading...'}</strong></>
                   : 'No professional selected — tap to assign one'}
               </span>
               <ChevronRight size={14} style={{ opacity: 0.4 }} />
