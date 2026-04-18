@@ -4,9 +4,12 @@ import { useActivePractitioner, logoutPractitioner } from '../hooks/usePractitio
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const practitioner = useActivePractitioner();
+  const { practitioner, loading } = useActivePractitioner();
 
-  // If not authenticated as a practitioner, redirect to login
+  if (loading) {
+    return <div className="page-loading">Loading...</div>;
+  }
+
   if (!practitioner) {
     return <Navigate to="/admin/login" replace />;
   }

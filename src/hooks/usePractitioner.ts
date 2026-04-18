@@ -6,6 +6,7 @@ const SESSION_KEY = 'buddy_active_practitioner_id';
 
 export function useActivePractitioner() {
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadPractitioner() {
@@ -17,13 +18,16 @@ export function useActivePractitioner() {
         } catch (err) {
           setPractitioner(null);
         }
+      } else {
+        setPractitioner(null);
       }
+      setLoading(false);
     }
 
     loadPractitioner();
 
-    // Listen for login events
     const handleLogin = () => {
+      setLoading(true);
       loadPractitioner();
     };
 
@@ -31,12 +35,11 @@ export function useActivePractitioner() {
     return () => window.removeEventListener('practitioner-login', handleLogin);
   }, []);
 
-  return practitioner;
+  return { practitioner, loading };
 }
 
 export function loginPractitioner(practitionerId: string) {
   sessionStorage.setItem(SESSION_KEY, practitionerId);
-  // Trigger a storage event for other components to pick up the change
   window.dispatchEvent(new Event('practitioner-login'));
 }
 
