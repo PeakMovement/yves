@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient, getPractitioners } from '../lib/store';
+import { getClients, getCheckIns, hasCheckedInToday, createClient, createSymptom, deleteClient, getPractitioners, getPractitionerDisplayName } from '../lib/store';
 import { getLoggedInPractitionerId } from '../hooks/usePractitioner';
 import { sendWelcomeEmail, getWebhookUrl, setWebhookUrl } from '../lib/email';
 import type { Client, CheckIn, Practitioner } from '../types/database';
@@ -195,7 +195,7 @@ export default function AdminClientsPage() {
             >
               {practitioners.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {getPractitionerDisplayName(p)}
                 </option>
               ))}
             </select>
