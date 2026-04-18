@@ -22,11 +22,7 @@ export function useActivePractitioner() {
 
     loadPractitioner();
 
-    // Listen for login events
-    const handleLogin = () => {
-      loadPractitioner();
-    };
-
+    const handleLogin = () => { loadPractitioner(); };
     window.addEventListener('practitioner-login', handleLogin);
     return () => window.removeEventListener('practitioner-login', handleLogin);
   }, []);
@@ -34,9 +30,13 @@ export function useActivePractitioner() {
   return practitioner;
 }
 
+export function useIsAdmin(): boolean {
+  const practitioner = useActivePractitioner();
+  return practitioner?.is_admin === true;
+}
+
 export function loginPractitioner(practitionerId: string) {
   sessionStorage.setItem(SESSION_KEY, practitionerId);
-  // Trigger a storage event for other components to pick up the change
   window.dispatchEvent(new Event('practitioner-login'));
 }
 

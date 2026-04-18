@@ -1,21 +1,16 @@
 import { Navigate, Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut } from 'lucide-react';
-import { useActivePractitioner, logoutPractitioner, getLoggedInPractitionerId } from '../hooks/usePractitioner';
+import { LayoutDashboard, Users, LogOut, KeyRound, Stethoscope, MessageSquare, Settings, UserPlus } from 'lucide-react';
+import { useActivePractitioner, logoutPractitioner } from '../hooks/usePractitioner';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const practitioner = useActivePractitioner();
-  const sessionId = getLoggedInPractitionerId();
 
-  // Only redirect if there's no session AND no practitioner loaded
-  if (!sessionId && !practitioner) {
+  if (!practitioner) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // Show loading while fetching practitioner data
-  if (sessionId && !practitioner) {
-    return <div className="page-loading">Loading...</div>;
-  }
+  const isAdmin = practitioner.is_admin === true;
 
   function handleLogout() {
     logoutPractitioner();
@@ -29,7 +24,7 @@ export default function AdminLayout() {
           <div className="brand-icon">B</div>
           <div>
             <h1>Buddy</h1>
-            <span className="brand-tagline">Practitioner Portal</span>
+            <span className="brand-tagline">{isAdmin ? 'Admin Portal' : 'Practitioner Portal'}</span>
           </div>
         </div>
 
@@ -42,9 +37,35 @@ export default function AdminLayout() {
             <Users size={18} />
             <span>Clients</span>
           </NavLink>
+
+          {isAdmin && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
+              <NavLink to="/admin/practitioners" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <Stethoscope size={18} />
+                <span>Practitioners</span>
+              </NavLink>
+              <NavLink to="/admin/requests" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <MessageSquare size={18} />
+                <span>All Requests</span>
+              </NavLink>
+              <NavLink to="/admin/add-client" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <UserPlus size={18} />
+                <span>Add Client</span>
+              </NavLink>
+              <NavLink to="/admin/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <Settings size={18} />
+                <span>Settings</span>
+              </NavLink>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">
+          <NavLink to="/admin/change-password" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <KeyRound size={18} />
+            <span>Change Password</span>
+          </NavLink>
           <button className="sidebar-link" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
             <LogOut size={18} />
             <span>Logout</span>

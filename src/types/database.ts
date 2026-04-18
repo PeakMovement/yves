@@ -1,9 +1,10 @@
 export interface Practitioner {
   id: string;
-  full_name: string;
-  name?: string;
+  name: string;
+  full_name?: string;
   login_code: string;
   password_hash: string;
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -28,7 +29,7 @@ export interface CheckIn {
   created_at: string;
   overall_feeling: 1 | 2 | 3 | 4 | 5;
   symptom_change: 'much_better' | 'slightly_better' | 'same' | 'slightly_worse' | 'much_worse';
-  pain_level: number; // 0-10
+  pain_level: number;
   sleep_quality: 1 | 2 | 3 | 4 | 5;
   stress_level: 1 | 2 | 3 | 4 | 5;
   medication_taken: boolean;
@@ -49,7 +50,7 @@ export interface SymptomEntry {
   id: string;
   check_in_id: string;
   symptom_id: string;
-  severity: number; // 0-10
+  severity: number;
   notes: string;
 }
 
@@ -78,7 +79,7 @@ export interface FollowUpReport {
 export interface ReportSummary {
   overall_trend: 'improving' | 'stable' | 'declining' | 'mixed';
   avg_pain_level: number;
-  pain_trend: number[]; // daily pain levels
+  pain_trend: number[];
   avg_sleep_quality: number;
   avg_stress_level: number;
   symptom_changes: {

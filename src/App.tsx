@@ -14,6 +14,10 @@ import ClientProgressPage from './pages/ClientProgressPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminClientsPage from './pages/AdminClientsPage';
 import AdminClientDetailPage from './pages/AdminClientDetailPage';
+import AdminPractitionersPage from './pages/AdminPractitionersPage';
+import AdminRequestsPage from './pages/AdminRequestsPage';
+import AdminSettingsPage from './pages/AdminSettingsPage';
+import AdminAddClientPage from './pages/AdminAddClientPage';
 import { initializePractitioners } from './lib/initPractitioners';
 
 function App() {
@@ -25,36 +29,30 @@ function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-        {/* Portal Selection */}
-        <Route path="/" element={<PortalSelectPage />} />
+          <Route path="/" element={<PortalSelectPage />} />
+          <Route path="/app/login" element={<ClientLoginPage />} />
+          <Route path="/app/register" element={<ClientRegistrationPage />} />
+          <Route path="/admin/login" element={<PractitionerLoginPage />} />
 
-        {/* Client Login */}
-        <Route path="/app/login" element={<ClientLoginPage />} />
+          <Route path="/app" element={<ClientLayout />}>
+            <Route index element={<Navigate to="/app/checkin" replace />} />
+            <Route path="checkin" element={<CheckInPage />} />
+            <Route path="query" element={<QueryPage />} />
+            <Route path="timeline" element={<TimelinePage />} />
+            <Route path="progress" element={<ClientProgressPage />} />
+          </Route>
 
-        {/* Client Registration */}
-        <Route path="/app/register" element={<ClientRegistrationPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="clients" element={<AdminClientsPage />} />
+            <Route path="clients/:clientId" element={<AdminClientDetailPage />} />
+            <Route path="practitioners" element={<AdminPractitionersPage />} />
+            <Route path="requests" element={<AdminRequestsPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
+            <Route path="add-client" element={<AdminAddClientPage />} />
+          </Route>
 
-        {/* Practitioner Login */}
-        <Route path="/admin/login" element={<PractitionerLoginPage />} />
-
-        {/* Client Portal (requires login) */}
-        <Route path="/app" element={<ClientLayout />}>
-          <Route index element={<Navigate to="/app/checkin" replace />} />
-          <Route path="checkin" element={<CheckInPage />} />
-          <Route path="query" element={<QueryPage />} />
-          <Route path="timeline" element={<TimelinePage />} />
-          <Route path="progress" element={<ClientProgressPage />} />
-        </Route>
-
-        {/* Admin / Practitioner Portal */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="clients" element={<AdminClientsPage />} />
-          <Route path="clients/:clientId" element={<AdminClientDetailPage />} />
-        </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
