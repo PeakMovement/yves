@@ -1423,28 +1423,240 @@ body {
 
 /* Generated Report Card */
 .generated-report {
-  border: 2px solid var(--primary-light);
-  background: var(--surface);
-  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.report-brand {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.report-brand-name {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.report-brand-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.report-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+.report-client-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.report-client-left h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.report-client-left p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.report-client-right {
+  text-align: right;
+}
+
+.report-client-right p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.report-trend-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 24px;
 }
 
-.generated-report .report-header {
-  margin-bottom: 20px;
+.report-trend-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1.5px solid;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.generated-report .report-section {
-  margin-bottom: 16px;
+.report-trend-caption {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
-.generated-report .report-section h4 {
+.report-section-title {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.report-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.report-metric {
+  text-align: center;
+  padding: 16px 8px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.report-metric-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.report-metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.report-chart-wrap {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+
+.report-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-flag-item {
+  font-size: 13px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.report-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-note-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.report-recommendation {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.report-recommendation p {
+  font-size: 14px;
+  color: #166534;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.report-footer-brand {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.report-footer-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.generated-report .report-section {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+  .generated-report {
+    padding: 24px 18px;
+  }
+
+  .report-brand-name {
+    font-size: 22px;
+  }
+
+  .report-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .report-client-info {
+    flex-direction: column;
+  }
+
+  .report-client-right {
+    text-align: left;
+  }
+
+  .report-trend-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .report-footer {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
 }
 
 /* Client Progress Page */

@@ -28,8 +28,6 @@ import {
   Pill,
   MessageSquare,
   Activity,
-  Moon,
-  Brain,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -184,62 +182,71 @@ export default function AdminClientDetailPage() {
 
       {/* Report Section */}
       {showReport && report && (
-        <div className="generated-report card">
-          <div className="report-header">
-            <div className="report-title">
-              <FileText size={24} />
-              <div>
-                <h3>Follow-Up Report</h3>
-                <p className="report-meta">
-                  {formatDate(report.period_start)} – {formatDate(report.period_end)}
-                </p>
+        <div className="generated-report">
+          <div className="report-brand">
+            <h2 className="report-brand-name">PEAK MOVEMENT</h2>
+            <span className="report-brand-sub">Client Follow-Up Report</span>
+          </div>
+
+          <div className="report-divider" />
+
+          <div className="report-client-info">
+            <div className="report-client-left">
+              <h3>{client.full_name}</h3>
+              <p>{client.primary_complaint}</p>
+            </div>
+            <div className="report-client-right">
+              <p>{formatDate(report.period_start)} – {formatDate(report.period_end)}</p>
+              <p>{report.total_check_ins} check-in{report.total_check_ins !== 1 ? 's' : ''} recorded</p>
+            </div>
+          </div>
+
+          <div className="report-divider" />
+
+          {/* Overall Trend */}
+          <div className="report-trend-row">
+            <div className="report-trend-badge" style={{ backgroundColor: trendColor(report.summary.overall_trend) + '15', color: trendColor(report.summary.overall_trend), borderColor: trendColor(report.summary.overall_trend) + '30' }}>
+              <TrendIcon size={20} />
+              <span>{trendLabel(report.summary.overall_trend)}</span>
+            </div>
+            <span className="report-trend-caption">Overall trend across reporting period</span>
+          </div>
+
+          {/* Key Metrics */}
+          <div className="report-section">
+            <h4 className="report-section-title">Key Metrics</h4>
+            <div className="report-metrics-grid">
+              <div className="report-metric">
+                <span className="report-metric-value" style={{ color: painColor(report.summary.avg_pain_level) }}>{report.summary.avg_pain_level}</span>
+                <span className="report-metric-label">Avg Pain</span>
+              </div>
+              <div className="report-metric">
+                <span className="report-metric-value">{report.summary.avg_sleep_quality}/5</span>
+                <span className="report-metric-label">Avg Sleep</span>
+              </div>
+              <div className="report-metric">
+                <span className="report-metric-value">{report.summary.avg_stress_level}/5</span>
+                <span className="report-metric-label">Avg Stress</span>
+              </div>
+              <div className="report-metric">
+                <span className="report-metric-value">{report.compliance_rate}%</span>
+                <span className="report-metric-label">Compliance</span>
               </div>
             </div>
-            <div className="report-badge" style={{ backgroundColor: trendColor(report.summary.overall_trend) + '20', color: trendColor(report.summary.overall_trend) }}>
-              <TrendIcon size={16} />
-              {trendLabel(report.summary.overall_trend)}
-            </div>
           </div>
 
-          <div className="report-stats">
-            <div className="stat-card">
-              <span className="stat-value">{report.total_check_ins}</span>
-              <span className="stat-label">Check-ins</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{report.compliance_rate}%</span>
-              <span className="stat-label">Compliance</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value" style={{ color: painColor(report.summary.avg_pain_level) }}>{report.summary.avg_pain_level}</span>
-              <span className="stat-label">Avg Pain</span>
-            </div>
-          </div>
-
+          {/* Pain Trajectory */}
           <div className="report-section">
-            <h4><Activity size={14} /> Pain Trajectory</h4>
-            <div className="chart-card">
+            <h4 className="report-section-title"><Activity size={14} /> Pain Trajectory</h4>
+            <div className="report-chart-wrap">
               <MiniChart data={report.summary.pain_trend} label="Daily pain level" />
             </div>
           </div>
 
-          <div className="report-section">
-            <h4><Moon size={14} /> Sleep & <Brain size={14} /> Stress</h4>
-            <div className="report-stats">
-              <div className="stat-card">
-                <span className="stat-value">{report.summary.avg_sleep_quality}/5</span>
-                <span className="stat-label">Avg Sleep</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">{report.summary.avg_stress_level}/5</span>
-                <span className="stat-label">Avg Stress</span>
-              </div>
-            </div>
-          </div>
-
+          {/* Symptom Changes */}
           {report.summary.symptom_changes.length > 0 && (
             <div className="report-section">
-              <h4>Symptom Changes</h4>
+              <h4 className="report-section-title">Symptom Changes</h4>
               <div className="symptom-changes-list">
                 {report.summary.symptom_changes.map((sc, i) => (
                   <div key={i} className="symptom-change-row">
@@ -254,36 +261,43 @@ export default function AdminClientDetailPage() {
             </div>
           )}
 
+          {/* Flags */}
           {report.summary.flags.length > 0 && (
-            <div className="report-section flags-section">
-              <h4><AlertTriangle size={14} color="#f59e0b" /> Flags</h4>
-              <ul className="flags-list">
+            <div className="report-section">
+              <h4 className="report-section-title"><AlertTriangle size={14} color="#f59e0b" /> Flags</h4>
+              <div className="report-flags">
                 {report.summary.flags.map((flag, i) => (
-                  <li key={i}>{flag}</li>
+                  <div key={i} className="report-flag-item">{flag}</div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
+          {/* Client Notes */}
           {report.summary.client_notes_highlights.length > 0 && (
             <div className="report-section">
-              <h4><MessageSquare size={14} /> Client Notes</h4>
-              <ul className="notes-list">
+              <h4 className="report-section-title"><MessageSquare size={14} /> Client Notes</h4>
+              <div className="report-notes-list">
                 {report.summary.client_notes_highlights.map((note, i) => (
-                  <li key={i}>"{note}"</li>
+                  <div key={i} className="report-note-item">"{note}"</div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
-          <div className="report-section recommendation-section">
-            <h4>Clinical Recommendation</h4>
-            <p className="recommendation-text">{report.summary.recommendation_for_practitioner}</p>
+          {/* Recommendation */}
+          <div className="report-section">
+            <h4 className="report-section-title">Clinical Recommendation</h4>
+            <div className="report-recommendation">
+              <p>{report.summary.recommendation_for_practitioner}</p>
+            </div>
           </div>
 
+          <div className="report-divider" />
+
           <div className="report-footer">
-            <p>Generated by Buddy — Predictiv Symptom Tracker</p>
-            <p>Report ID: {report.id.slice(0, 8)} | Generated: {formatDate(report.generated_at)}</p>
+            <span className="report-footer-brand">PEAK MOVEMENT</span>
+            <span className="report-footer-meta">Report {report.id.slice(0, 8)} | Generated {formatDate(report.generated_at)}</span>
           </div>
         </div>
       )}
